@@ -2,7 +2,7 @@
 Summary: Designs YJSP regen engine contour/regen circuit using NASA CEA, optimizes around thermal and structural requirements for peak thrust.
 Point of Contact: Benjamin Woodman (benwoodman@gatech.edu)
 
-# GETTING PYTHON
+# Getting Python
 
 You will need python 3 on your machine. I’ve tested with both 3.7 and 3.8 and they work fine.  
 
@@ -18,7 +18,7 @@ $ export PATH="/usr/local/opt/python@3.8/bin:$PATH"
 
 For windows, I’d start here if you need Python installed: https://www.python.org/downloads/  
 
-# DOWNLOAD PACKAGES
+# Download Packages
 
 With that taken care of, you should be good to install the packages listed in this guide: 
 
@@ -34,7 +34,7 @@ Good news is that this doesn’t matter. I don’t know what causes this, but th
 
 If you run into any other issues with installation let me know and we can work through them.
 
-# USAGE
+# Usage
 
 Now just navigate to the directory where you’ve saved the code and run: 
 
