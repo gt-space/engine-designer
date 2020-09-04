@@ -25,7 +25,7 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
-import engine_designer.dataCollectionScript as dc
+from engine_designer.dataCollectionScript import Engine
 from .bartzCorrelation import Bartz
 from .jetAProps import getProps
 from .pressureDrop import pressureDrop
@@ -33,7 +33,13 @@ from .stress import fos
 
 np.set_printoptions(threshold=sys.maxsize) # Print full arrays for debugging
 
+# NOTE: In the future this script should be converted into a class structure
+
 def design_regen():
+
+    # Create engine class
+    engine = Engine(3500, 18, 6)
+    engine.design_engine()
     # ==== Constants ====
 
     # Bartz Correlation Data:
@@ -41,12 +47,12 @@ def design_regen():
     # CONVERTED TO ENGLISH UNITS IN EQUATIONS BELOW THEN RECONVERTED
     g = 32.174 # Gravity, ft/s^2
     T_wg = 700 * 1.8 # Convert K to R (initial guess for finding coolant temps)
-    C_star = dc.C_star * 3.28084 # Convert m/s to ft/s
-    R_tCurve = dc.R_tCurve * 39.3701 # Convert m to in
-    R_t = dc.R_t * 39.3701 # Convert m to in
-    P_c = dc.P_inj_psi # Injector face pressure in psi
-    T_c0 = dc.engineProps[0,9] * 1.8 # Convert K to R
-    gam0 = dc.engineProps[0,15] # Chamber stagnation gamma
+    C_star = engine.C_star * 3.28084 # Convert m/s to ft/s
+    R_tCurve = engine.R_tCurve * 39.3701 # Convert m to in
+    R_t = engine.R_t * 39.3701 # Convert m to in
+    P_c = engine.P_inj_psi # Injector face pressure in psi
+    T_c0 = engine.engineProps[0,9] * 1.8 # Convert K to R
+    gam0 = engine.engineProps[0,15] # Chamber stagnation gamma
         # !!! LOOK INTO THIS. cp_ns probably needs a more general assignment
         # Old cp_ns - new estimate used as 2.2 KJ/Kg*K - correlation to come later
         # NOTE: Effective specific heat used (instead of Frozen)
@@ -54,22 +60,22 @@ def design_regen():
     cp_ns = 2.2 * 0.23884 # Convert from Kilo-Joules to BTU/lb*F
         # Originally used effective prandtl number from CEA, switched to gamma
         # correlation
-    # praneff_ns2 = dc.engineProps[0,21] # No conversion needed
+    # praneff_ns2 = engine.engineProps[0,21] # No conversion needed
     praneff_ns = (4*gam0)/(9*gam0-5)
-    visc_ns = (dc.engineProps[0,17]/1000) * (0.0672/12) # Convert to Poise then to lb/in-s
+    visc_ns = (engine.engineProps[0,17]/1000) * (0.0672/12) # Convert to Poise then to lb/in-s
 
     # Package info to make calling Bartz cleaner
     bartzData = [T_wg, T_c0, R_t, P_c, C_star, R_tCurve, praneff_ns, visc_ns, cp_ns, g]
 
     # Non-Bartz Related Properties
-    mDot = dc.mDot_f # Mass flow of coolant (kg/s)
+    mDot = engine.mDot_f # Mass flow of coolant (kg/s)
     chh = 0.001 # Channel height (m)
     wall_t = 0.001 # Inner wall thickness (m)
     cond_w = 330 # W/m-k, wall conductivity
 
     # ==== Find Critical Points ====
     i_inj = 0
-    i_t = dc.throatInd + 100
+    i_t = engine.throatInd + 100
     i_conv = math.floor((100 + i_t) / 2) # midpoint between throat and convergence start
     i_exit = 199 # Last point
 
@@ -83,13 +89,13 @@ def design_regen():
     critical_values = []
 
     # Loop through stations (from exit to inj) to find coolant temperatures at critical points
-    for i in range(dc.engineProps.shape[0] - 1, -1, -1):
+    for i in range(engine.engineProps.shape[0] - 1, -1, -1):
         (rho_c, C_pc, cond_c, viscK_c) = getProps(T_cb)
         if i > 0:
-            length = dc.engineProps[i, 1] - dc.engineProps[i - 1, 1] #Station "thickness"
-        R = dc.engineProps[i, 0] # Station inner radius
+            length = engine.engineProps[i, 1] - engine.engineProps[i - 1, 1] #Station "thickness"
+        R = engine.engineProps[i, 0] # Station inner radius
         A_totg = 2 * math.pi * R * length # Total hot gas side wall area for heat transfer
-        (h_g, qdot_ge, T_aw) = Bartz(dc.engineProps, bartzData, i)
+        (h_g, qdot_ge, T_aw) = Bartz(engine.engineProps, bartzData, i)
         q_ge = qdot_ge * A_totg # Total heat transfer from gas side (W/m^2 * m^2 = W)
         dT_c = (q_ge)/(C_pc * mDot) # Temperature change in coolant
         if i in criticals:
@@ -133,7 +139,7 @@ def design_regen():
                 converged = False
                 while not converged:
                     bartzData[0] = T_wg * 1.8 # Replace old gas side wall temp (K to R)
-                    (h_g, qdot_ge, T_aw) = Bartz(dc.engineProps, bartzData, i)
+                    (h_g, qdot_ge, T_aw) = Bartz(engine.engineProps, bartzData, i)
                     q_ge = qdot_ge * A_totg
                     T_wc = T_wg - qdot_ge * wall_t / cond_w # Find cold side wall temp
                     h_c = 0.021 * (Re_c)**0.8 * (Pr_c)**0.4 * (0.64 + 0.36 * (T_cb/T_wc)) * (cond_c/D_hyd)

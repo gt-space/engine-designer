@@ -33,142 +33,146 @@ from stress import fos
 
 np.set_printoptions(threshold=sys.maxsize) # Print full arrays for debugging
 
-# ==== Constants ====
+def design_regen_h():
+    # Create engine class
+    engine = Engine(3500, 18, 6)
+    engine.design_engine()
 
-# Bartz Correlation Data:
-# DUE TO BARTZ CORRELATION BEING DEVELOPED IN ENGLISH UNITS, VALUES
-# CONVERTED TO ENGLISH UNITS IN EQUATIONS BELOW THEN RECONVERTED
-g = 32.174 # Gravity, ft/s^2
-T_wg = 700 * 1.8 # Convert K to R (initial guess for finding coolant temps)
-C_star = dc.C_star * 3.28084 # Convert m/s to ft/s
-R_tCurve = dc.R_tCurve * 39.3701 # Convert m to in
-R_t = dc.R_t * 39.3701 # Convert m to in
-P_c = dc.P_inj_psi # Injector face pressure in psi
-T_c0 = dc.engineProps[0,9] * 1.8 # Convert K to R
-gam0 = dc.engineProps[0,15] # Chamber stagnation gamma
-    # !!! LOOK INTO THIS. cp_ns probably needs a more general assignment
-    # Old cp_ns - new estimate used as 2.2 KJ/Kg*K - correlation to come later
-    # NOTE: Effective specific heat used (instead of Frozen)
-    # cp_ns = engineProps(1,15).*0.23884; %Convert from Joules to BTU/lb*F
-cp_ns = 2.2 * 0.23884 # Convert from Kilo-Joules to BTU/lb*F
-    # Originally used effective prandtl number from CEA, switched to gamma
-    # correlation
-# praneff_ns2 = dc.engineProps[0,21] # No conversion needed
-praneff_ns = (4*gam0)/(9*gam0-5)
-visc_ns = (dc.engineProps[0,17]/1000) * (0.0672/12) # Convert to Poise then to lb/in-s
+    # ==== Constants ====
+    # Bartz Correlation Data:
+    # DUE TO BARTZ CORRELATION BEING DEVELOPED IN ENGLISH UNITS, VALUES
+    # CONVERTED TO ENGLISH UNITS IN EQUATIONS BELOW THEN RECONVERTED
+    g = 32.174 # Gravity, ft/s^2
+    T_wg = 700 * 1.8 # Convert K to R (initial guess for finding coolant temps)
+    C_star = engine.C_star * 3.28084 # Convert m/s to ft/s
+    R_tCurve = engine.R_tCurve * 39.3701 # Convert m to in
+    R_t = engine.R_t * 39.3701 # Convert m to in
+    P_c = engine.P_inj_psi # Injector face pressure in psi
+    T_c0 = engine.engineProps[0,9] * 1.8 # Convert K to R
+    gam0 = engine.engineProps[0,15] # Chamber stagnation gamma
+        # !!! LOOK INTO THIS. cp_ns probably needs a more general assignment
+        # Old cp_ns - new estimate used as 2.2 KJ/Kg*K - correlation to come later
+        # NOTE: Effective specific heat used (instead of Frozen)
+        # cp_ns = engineProps(1,15).*0.23884; %Convert from Joules to BTU/lb*F
+    cp_ns = 2.2 * 0.23884 # Convert from Kilo-Joules to BTU/lb*F
+        # Originally used effective prandtl number from CEA, switched to gamma
+        # correlation
+    # praneff_ns2 = engine.engineProps[0,21] # No conversion needed
+    praneff_ns = (4*gam0)/(9*gam0-5)
+    visc_ns = (engine.engineProps[0,17]/1000) * (0.0672/12) # Convert to Poise then to lb/in-s
 
-# Package info to make calling Bartz cleaner
-bartzData = [T_wg, T_c0, R_t, P_c, C_star, R_tCurve, praneff_ns, visc_ns, cp_ns, g]
+    # Package info to make calling Bartz cleaner
+    bartzData = [T_wg, T_c0, R_t, P_c, C_star, R_tCurve, praneff_ns, visc_ns, cp_ns, g]
 
-# Non-Bartz Related Properties
-mDot = dc.mDot_f # Mass flow of coolant (kg/s)
-chw = 0.0005 # Channel width (m)
-wall_t = 0.001 # Inner wall thickness (m)
-cond_w = 330 # W/m-k, wall conductivity
+    # Non-Bartz Related Properties
+    mDot = engine.mDot_f # Mass flow of coolant (kg/s)
+    chw = 0.0005 # Channel width (m)
+    wall_t = 0.001 # Inner wall thickness (m)
+    cond_w = 330 # W/m-k, wall conductivity
 
-# ==== Find Critical Points ====
-i_inj = 0
-i_t = dc.throatInd + 100
-i_conv = math.floor((100 + i_t) / 2) # midpoint between throat and convergence start
-i_exit = 199 # Last point
+    # ==== Find Critical Points ====
+    i_inj = 0
+    i_t = engine.throatInd + 100
+    i_conv = math.floor((100 + i_t) / 2) # midpoint between throat and convergence start
+    i_exit = 199 # Last point
 
-criticals = [i_exit, i_t, i_conv, i_inj]
-names = ["Exit", "Throat", "Converging Section", "Injector face"]
+    criticals = [i_exit, i_t, i_conv, i_inj]
+    names = ["Exit", "Throat", "Converging Section", "Injector face"]
 
-# ==== Temperature calculations ====
-T_ci = 280.15 # Coolant Inlet Temperature, K
-T_cb = T_ci
-T_wg = T_wg / 1.8 # R to K
-critical_values = []
+    # ==== Temperature calculations ====
+    T_ci = 280.15 # Coolant Inlet Temperature, K
+    T_cb = T_ci
+    T_wg = T_wg / 1.8 # R to K
+    critical_values = []
 
-# Loop through stations (from exit to inj) to find coolant temperatures at critical points
-for i in range(dc.engineProps.shape[0] - 1, -1, -1):
-    (rho_c, C_pc, cond_c, viscK_c) = getProps(T_cb)
-    if i > 0:
-        length = dc.engineProps[i, 1] - dc.engineProps[i - 1, 1] #Station "thickness"
-    R = dc.engineProps[i, 0] # Station inner radius
-    A_totg = 2 * math.pi * R * length # Total hot gas side wall area for heat transfer
-    (h_g, qdot_ge, T_aw) = Bartz(dc.engineProps, bartzData, i)
-    q_ge = qdot_ge * A_totg # Total heat transfer from gas side (W/m^2 * m^2 = W)
-    dT_c = (q_ge)/(C_pc * mDot) # Temperature change in coolant
-    if i in criticals:
-        critical_values.append([i, R, (2*T_cb + dT_c)/2]) # Add the average station temp to the list
-    T_cb += dT_c
+    # Loop through stations (from exit to inj) to find coolant temperatures at critical points
+    for i in range(engine.engineProps.shape[0] - 1, -1, -1):
+        (rho_c, C_pc, cond_c, viscK_c) = getProps(T_cb)
+        if i > 0:
+            length = engine.engineProps[i, 1] - engine.engineProps[i - 1, 1] #Station "thickness"
+        R = engine.engineProps[i, 0] # Station inner radius
+        A_totg = 2 * math.pi * R * length # Total hot gas side wall area for heat transfer
+        (h_g, qdot_ge, T_aw) = Bartz(engine.engineProps, bartzData, i)
+        q_ge = qdot_ge * A_totg # Total heat transfer from gas side (W/m^2 * m^2 = W)
+        dT_c = (q_ge)/(C_pc * mDot) # Temperature change in coolant
+        if i in criticals:
+            critical_values.append([i, R, (2*T_cb + dT_c)/2]) # Add the average station temp to the list
+        T_cb += dT_c
 
 
-chh_range = [0.0005, 0.001, 0.0015, 0.002, 0.0025, 0.003, 0.0035, 0.004, 0.0045, 0.005] # List of channel widths to test (m)
-fw_range = [0.0005, 0.001, 0.0015, 0.002, 0.0025, 0.003, 0.0035, 0.004, 0.0045, 0.005] # List of fin widths to test (m)
+    chh_range = [0.0005, 0.001, 0.0015, 0.002, 0.0025, 0.003, 0.0035, 0.004, 0.0045, 0.005] # List of channel widths to test (m)
+    fw_range = [0.0005, 0.001, 0.0015, 0.002, 0.0025, 0.003, 0.0035, 0.004, 0.0045, 0.005] # List of fin widths to test (m)
 
-print(critical_values)
+    print(critical_values)
 
-# iterate through each critical point
-for i in range(len(critical_values)):
-    fos_array = np.zeros(shape=(len(chh_range),len(fw_range)))
-    # print("New critical point")
-    R = critical_values[i][1]
-    T_cb = critical_values[i][2]
-    (rho_c, C_pc, cond_c, viscK_c) = getProps(T_cb) # Update fluid properties
-    # Simulate for each combination of fin and channel widths
-    for chh in chh_range:
-        for fw in fw_range:
-            # Parameters
-            D_hyd = 2 * chw * chh / (chw + chh) # Channel hydraulic diameter
-            num_channels = 2 * math.pi * (R + wall_t) / (fw + chw) # Channel number
-            mDot_chan = mDot / num_channels # Mass flow rate through each one (kg/s)
-            A_cc = chw * chh # Cross sectional area of channel (m^2)
-            vel_c = mDot_chan/(A_cc * rho_c) # Coolant velocity in channel (m/s)
-            Re_c = (vel_c * D_hyd)/viscK_c # Coolant Reynolds number
-            Pr_c = viscK_c * rho_c * C_pc / cond_c # Coolant Prandtl Number
+    # iterate through each critical point
+    for i in range(len(critical_values)):
+        fos_array = np.zeros(shape=(len(chh_range),len(fw_range)))
+        # print("New critical point")
+        R = critical_values[i][1]
+        T_cb = critical_values[i][2]
+        (rho_c, C_pc, cond_c, viscK_c) = getProps(T_cb) # Update fluid properties
+        # Simulate for each combination of fin and channel widths
+        for chh in chh_range:
+            for fw in fw_range:
+                # Parameters
+                D_hyd = 2 * chw * chh / (chw + chh) # Channel hydraulic diameter
+                num_channels = 2 * math.pi * (R + wall_t) / (fw + chw) # Channel number
+                mDot_chan = mDot / num_channels # Mass flow rate through each one (kg/s)
+                A_cc = chw * chh # Cross sectional area of channel (m^2)
+                vel_c = mDot_chan/(A_cc * rho_c) # Coolant velocity in channel (m/s)
+                Re_c = (vel_c * D_hyd)/viscK_c # Coolant Reynolds number
+                Pr_c = viscK_c * rho_c * C_pc / cond_c # Coolant Prandtl Number
 
-            # Geometric Parameters (AT STATION, NOT SUM) !!! Double check these !!!
-            L_cor = chh + fw/2 # Corrected channel height for fin efficiency calcs
-            perim_conf = 2 * length + 2 * fw # Contact perimeter for fin efficiency calcs
-            A_conf = length * fw #contact area for fin efficiency calcs
-            A_fin = 2 * L_cor * length # Area of single fin in analysis segment, corrected for adiabatic tip
-            A_finTot = num_channels * A_fin # Total fin area
-            A_totc = A_finTot + num_channels * chw * length # Total coolant side heat transfer area
-            A_totg = 2 * math.pi * R * length #total hot gas side wall area for heat transfer
-            # Converge on thermal equilibrium
-            converged = False
-            while not converged:
-                bartzData[0] = T_wg * 1.8 # Replace old gas side wall temp (K to R)
-                (h_g, qdot_ge, T_aw) = Bartz(dc.engineProps, bartzData, i)
-                q_ge = qdot_ge * A_totg
-                T_wc = T_wg - qdot_ge * wall_t / cond_w # Find cold side wall temp
-                h_c = 0.021 * (Re_c)**0.8 * (Pr_c)**0.4 * (0.64 + 0.36 * (T_cb/T_wc)) * (cond_c/D_hyd)
-                #Run fin efficiency calculations to find the effective contact area
-                m = math.sqrt((h_c * perim_conf)/(cond_w * A_conf)) # Fin efficiency parameter
-                eta_fin = math.tanh(m * L_cor)/(m * L_cor) # Fin efficiency
-                eta_tot = 1 - (((num_channels * A_fin)/A_totc) * (1 - eta_fin)) # Overall coolant side heat transfer efficiency
-                q_ce = h_c * (T_wc - T_cb) * A_totc * eta_tot # Total heat transfer = flux * effective area
-                err = abs((q_ce-q_ge)/q_ge)
-                if err < 0.005:
-                    converged = True
-                else:
-                    if q_ge > q_ce:
-                        T_wg = T_wg + (50 * err) #Increase T_wg since coolant can't draw enough heat
-                    elif q_ce>q_ge:
-                        T_wg = T_wg - (50 * err) #Decrease T_wg since coolant can draw more heat
-            meanT = (T_wg + T_wc) / 2 # Mean temp for stress calculations (K)
-            dT = T_wg - T_wc # Temp difference for stress calculations (K)
-            (ny_conserv, ny_precise, nu_conserv, nu_precise) = fos(R, wall_t, meanT, dT)
-            # print(T_cb, meanT, nu_precise, round(num_channels))
-            fos_array[chh_range.index(chh)][fw_range.index(fw)] = nu_conserv
-            print(T_wg, dT)
+                # Geometric Parameters (AT STATION, NOT SUM) !!! Double check these !!!
+                L_cor = chh + fw/2 # Corrected channel height for fin efficiency calcs
+                perim_conf = 2 * length + 2 * fw # Contact perimeter for fin efficiency calcs
+                A_conf = length * fw #contact area for fin efficiency calcs
+                A_fin = 2 * L_cor * length # Area of single fin in analysis segment, corrected for adiabatic tip
+                A_finTot = num_channels * A_fin # Total fin area
+                A_totc = A_finTot + num_channels * chw * length # Total coolant side heat transfer area
+                A_totg = 2 * math.pi * R * length #total hot gas side wall area for heat transfer
+                # Converge on thermal equilibrium
+                converged = False
+                while not converged:
+                    bartzData[0] = T_wg * 1.8 # Replace old gas side wall temp (K to R)
+                    (h_g, qdot_ge, T_aw) = Bartz(engine.engineProps, bartzData, i)
+                    q_ge = qdot_ge * A_totg
+                    T_wc = T_wg - qdot_ge * wall_t / cond_w # Find cold side wall temp
+                    h_c = 0.021 * (Re_c)**0.8 * (Pr_c)**0.4 * (0.64 + 0.36 * (T_cb/T_wc)) * (cond_c/D_hyd)
+                    #Run fin efficiency calculations to find the effective contact area
+                    m = math.sqrt((h_c * perim_conf)/(cond_w * A_conf)) # Fin efficiency parameter
+                    eta_fin = math.tanh(m * L_cor)/(m * L_cor) # Fin efficiency
+                    eta_tot = 1 - (((num_channels * A_fin)/A_totc) * (1 - eta_fin)) # Overall coolant side heat transfer efficiency
+                    q_ce = h_c * (T_wc - T_cb) * A_totc * eta_tot # Total heat transfer = flux * effective area
+                    err = abs((q_ce-q_ge)/q_ge)
+                    if err < 0.005:
+                        converged = True
+                    else:
+                        if q_ge > q_ce:
+                            T_wg = T_wg + (50 * err) #Increase T_wg since coolant can't draw enough heat
+                        elif q_ce>q_ge:
+                            T_wg = T_wg - (50 * err) #Decrease T_wg since coolant can draw more heat
+                meanT = (T_wg + T_wc) / 2 # Mean temp for stress calculations (K)
+                dT = T_wg - T_wc # Temp difference for stress calculations (K)
+                (ny_conserv, ny_precise, nu_conserv, nu_precise) = fos(R, wall_t, meanT, dT)
+                # print(T_cb, meanT, nu_precise, round(num_channels))
+                fos_array[chh_range.index(chh)][fw_range.index(fw)] = nu_conserv
+                print(T_wg, dT)
 
-    # Plot Channel width, fin width and fos
-    fig = plt.figure()
-    ax = fig.gca(projection='3d')
-    X = np.array(fw_range)
-    Y = np.array(chh_range)
-    X, Y = np.meshgrid(X, Y)
+        # Plot Channel width, fin width and fos
+        fig = plt.figure()
+        ax = fig.gca(projection='3d')
+        X = np.array(fw_range)
+        Y = np.array(chh_range)
+        X, Y = np.meshgrid(X, Y)
 
-    surf = ax.plot_surface(X, Y, fos_array, cmap=cm.coolwarm, linewidth=0, antialiased=False)
-    fig.suptitle(names[i], fontsize=20)
-    plt.xlabel('Fin Width', fontsize=14)
-    plt.ylabel('Channel Height', fontsize=14)
+        surf = ax.plot_surface(X, Y, fos_array, cmap=cm.coolwarm, linewidth=0, antialiased=False)
+        fig.suptitle(names[i], fontsize=20)
+        plt.xlabel('Fin Width', fontsize=14)
+        plt.ylabel('Channel Height', fontsize=14)
 
-    # Add a color bar which maps values to colors.
-    fig.colorbar(surf, shrink=0.5, aspect=5)
+        # Add a color bar which maps values to colors.
+        fig.colorbar(surf, shrink=0.5, aspect=5)
 
-    plt.show()
+        plt.show()
