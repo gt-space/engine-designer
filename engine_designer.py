@@ -1,4 +1,4 @@
-from engine_designer.dataCollectionScript import design_engine
+from engine_designer.dataCollectionScript import Engine
 import matplotlib.pyplot as plt
 
 # USAGE:
@@ -17,8 +17,10 @@ import matplotlib.pyplot as plt
 # vis, cond, pran, condfz, pranfz]
 
 # Run it!
-(engineContour, engineProps) = design_engine(3500, 18, 6)
+engine = Engine(3500, 18, 6)
+engine.design_engine()
+print(engine.engineProps)
 
 # See a specific value (change the 10 to the index of the property you want to see):
-plt.plot(engineProps[:, 1], engineProps[:, 10])
+plt.plot(engine.engineProps[:, 1], engine.engineProps[:, 10])
 plt.show()

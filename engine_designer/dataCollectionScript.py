@@ -20,8 +20,8 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 from rocketcea.cea_obj import CEA_Obj
-from engine_designer.getContour import getContour
-from engine_designer.getProperties import getProps
+from .getContour import getContour
+from .getProperties import getProps
 
 np.set_printoptions(threshold=sys.maxsize) #Print setting for debugging
 
@@ -30,65 +30,71 @@ np.set_printoptions(threshold=sys.maxsize) #Print setting for debugging
 # P_inj: Injector face pressure (Bar)
 # conRat: Enigne contraciton ratio
 # divAng: Divergence half angle (Deg)
-def design_engine(thrust_nom, P_inj, conRat, MR = 1.8, divAng = 15):
-    # ==== Propellants: Kerosene and Liquid Oxygen ====
-    LStar = 1.05 # Characteristic length (m)
-    # ==== Define Constants ====
-    g0 = 9.81 # Gravity (m/s^2)
-    bar = 100000 # 1 Bar in Pa
-    Ru = 8314.46 # Universal Gas Constant (J/kmolK)
+class Engine:
+    def __init__(self, thrust_nom, P_inj, conRat, MR = 1.8, divAng = 15):
+        self.thrust_nom = thrust_nom
+        self.P_inj = P_inj
+        self.conRat = conRat
+        self.MR = MR
+        self.divAng = divAng
 
-    # ==== Specify Parameters ====
-    P_inj_psi = P_inj * 14.5038 # Psi is used in many CEA funcitons
-    P_amb = 1.01325 # Ambient Pressure (Bar)
-    P_rat1 = P_amb/P_inj # Pressure ratio of overall expansion
-    P_rat2 = P_inj/P_amb # Inverse pressure ratio of overall expansion
+    def design_engine(self):
+        # ==== Propellants: Kerosene and Liquid Oxygen ====
+        self.LStar = 1.05 # Characteristic length (m)
+        # ==== Define Constants ====
+        self.g0 = 9.81 # Gravity (m/s^2)
+        self.bar = 100000 # 1 Bar in Pa
+        self.Ru = 8314.46 # Universal Gas Constant (J/kmolK)
+
+        # ==== Specify Parameters ====
+        self.P_inj_psi = self.P_inj * 14.5038 # Psi is used in many CEA funcitons
+        self.P_amb = 1.01325 # Ambient Pressure (Bar)
+        self.P_rat1 = self.P_amb/self.P_inj # Pressure ratio of overall expansion
+        self.P_rat2 = self.P_inj/self.P_amb # Inverse pressure ratio of overall expansion
 
 
-    ispObj = CEA_Obj( oxName='LOX', fuelName='JetA', fac_CR=conRat)
+        ispObj = CEA_Obj( oxName='LOX', fuelName='JetA', fac_CR=self.conRat)
 
-    pip_t = ispObj.get_Throat_PcOvPe(P_inj_psi, MR)
+        self.pip_t = ispObj.get_Throat_PcOvPe(self.P_inj_psi, self.MR)
 
-    # Find some Parameters...
-    # get the area ratio where optimal expansion happens
-    expRat = ispObj.get_eps_at_PcOvPe(P_inj_psi, MR, P_rat2)
+        # Find some Parameters...
+        # get the area ratio where optimal expansion happens
+        self.expRat = ispObj.get_eps_at_PcOvPe(self.P_inj_psi, self.MR, self.P_rat2)
 
-    C_f = ispObj.get_PambCf(14.69594878, P_inj_psi, MR, expRat)
+        self.C_f = ispObj.get_PambCf(14.69594878, self.P_inj_psi, self.MR, self.expRat)
 
-    M = ispObj.get_MachNumber(P_inj_psi, MR, expRat)
+        self.M = ispObj.get_MachNumber(self.P_inj_psi, self.MR, self.expRat)
 
-    sonic_v = ispObj.get_SonicVelocities(P_inj_psi, MR, expRat)
-    sonic_v = sonic_v[2]*0.3048
+        sonic_v = ispObj.get_SonicVelocities(self.P_inj_psi, self.MR, self.expRat)
+        self.sonic_v = sonic_v[2]*0.3048
 
-    # ====Size & Calculate Engine Parameters====
-    # This creates a 200x22 array describing various properties along the nozzle.
-    # See  getProperties.py for details
+        # ====Size & Calculate Engine Parameters====
+        # This creates a 200x22 array describing various properties along the nozzle.
+        # See  getProperties.py for details
 
-    nozCorrFactor = (1 + math.cos(divAng*math.pi/180))/2 # Correction factor for nozzle exit velocity, using conic appx
-    V_exit = sonic_v * M # Sonic Vel * Mach @ Exit (m/s)
-    Cf_exit = C_f # Exit thrust coeficient
-    mDot_tot = thrust_nom/(nozCorrFactor * V_exit) # Calculate total mass flow based on V_exit (kg/s)
-    mDot_o = (mDot_tot/(MR + 1)) * MR # Oxidizer mass flow (kg/s)
-    mDot_f = mDot_tot - mDot_o # Fuel mass flow (kg/s)
+        self.nozCorrFactor = (1 + math.cos(self.divAng*math.pi/180))/2 # Correction factor for nozzle exit velocity, using conic appx
+        self.V_exit = self.sonic_v * self.M # Sonic Vel * Mach @ Exit (m/s)
+        self.Cf_exit = self.C_f # Exit thrust coeficient
+        self.mDot_tot = self.thrust_nom/(self.nozCorrFactor * self.V_exit) # Calculate total mass flow based on V_exit (kg/s)
+        self.mDot_o = (self.mDot_tot/(self.MR + 1)) * self.MR # Oxidizer mass flow (kg/s)
+        self.mDot_f = self.mDot_tot - self.mDot_o # Fuel mass flow (kg/s)
 
-    T = ispObj.get_Temperatures(P_inj_psi, MR, expRat, frozen=0, frozenAtThroat=0)
+        self.T = ispObj.get_Temperatures(self.P_inj_psi, self.MR, self.expRat, frozen=0, frozenAtThroat=0)
 
-    T_c = (T[0]-32)*5/9 # Chamber temperature (F to C)
-    T_t = (T[1]-32)*5/9 # Throat temperature (F to C)
+        self.T_c = (self.T[0]-32)*5/9 # Chamber temperature (F to C)
+        self.T_t = (self.T[1]-32)*5/9 # Throat temperature (F to C)
 
-    (MW, gam) = ispObj.get_Throat_MolWt_gamma(P_inj_psi, MR) # Get molecular weight and specific heat ratio
+        (self.MW, self.gam) = ispObj.get_Throat_MolWt_gamma(self.P_inj_psi, self.MR) # Get molecular weight and specific heat ratio
 
-    A_t = (mDot_tot/((P_inj / pip_t) * bar)) * math.sqrt((Ru * T_t)/(MW * gam)) # Area at throat (m^2)
-    C_star = ispObj.get_Cstar(P_inj_psi, MR) * 0.3048 * 0.975 # Calculate C*, m/s, apply 0.975 correction factor per H&H (pp. 70)
-    R_t = math.sqrt(A_t/math.pi) # Calculate Throat Radius (m)
-    R_c = R_t*math.sqrt(conRat) # Chamber Radius (m)
-    radRat = 0.7 # R2/R2max - Refer to RPA User Manual : BETWEEN 0 & 1
-    conAng = 35 * math.pi / 180 # Nozzle contraction angle (degrees to rad)
+        self.A_t = (self.mDot_tot/((self.P_inj / self.pip_t) * self.bar)) * math.sqrt((self.Ru * self.T_t)/(self.MW * self.gam)) # Area at throat (m^2)
+        self.C_star = ispObj.get_Cstar(self.P_inj_psi, self.MR) * 0.3048 * 0.975 # Calculate C*, m/s, apply 0.975 correction factor per H&H (pp. 70)
+        self.R_t = math.sqrt(self.A_t / math.pi) # Calculate Throat Radius (m)
+        self.R_c = self.R_t * math.sqrt(self.conRat) # Chamber Radius (m)
+        self.radRat = 0.7 # R2/R2max - Refer to RPA User Manual : BETWEEN 0 & 1
+        self.conAng = 35 * math.pi / 180 # Nozzle contraction angle (degrees to rad)
 
-    # Generate engine contour from external function:
-    (engineContour, chBarrel, nozzleContour, R_tCurve, throatInd) = getContour(R_t, LStar, conRat, conAng, divAng, radRat, expRat)
+        # Generate engine contour from external function:
+        (self.engineContour, self.chBarrel, self.nozzleContour, self.R_tCurve, self.throatInd) = getContour(self.R_t, self.LStar, self.conRat, self.conAng, self.divAng, self.radRat, self.expRat)
 
-    # Generate engine property array from helper function
-    engineProps = getProps(chBarrel, nozzleContour, throatInd, ispObj, P_inj_psi, MR, A_t)
-
-    return (engineContour, engineProps)
+        # Generate engine property array from helper function
+        self.engineProps = getProps(self.chBarrel, self.nozzleContour, self.throatInd, ispObj, self.P_inj_psi, self.MR, self.A_t)

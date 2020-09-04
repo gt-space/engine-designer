@@ -1,5 +1,5 @@
 # Scirpt to calculate the pressure lost at a station along the engine
-from colebrook import colebrook
+from .colebrook import colebrook
 
 
 def pressureDrop(CSA, perim, mDot_chan, rho_c, len, viscK_c):

@@ -1,5 +1,5 @@
 import math
-from findPrinciples import findPrinciples
+from .findPrinciples import findPrinciples
 
 def fos(R, t, meanT, dT):
     # Constants
