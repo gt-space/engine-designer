@@ -1,6 +1,6 @@
 # engine-designer
 Summary: Designs YJSP regen engine contour/regen circuit using NASA CEA, optimizes around thermal and structural requirements for peak thrust.
-Point of Contact: Benjamin Woodman (benwoodman@gatech.edu)
+Point of Contact: Ben Woodman (benwoodman@gatech.edu)
 
 # Getting Python
 
