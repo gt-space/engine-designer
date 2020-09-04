@@ -1,0 +1,24 @@
+from engine_designer.dataCollectionScript import design_engine
+import matplotlib.pyplot as plt
+
+# USAGE:
+# (engineContour, engineProps) = design_engine(thrust_nom, P_inj, conRat, MR, divAng)
+# thrust_nom: Design thrust (N)
+# P_inj: Injector face pressure (Bar)
+# conRat: Enigne contraciton ratio
+# MR: ox/fuel (default = 1.8)
+# divAng: Divergence half angle (Deg) (defualt = 15)
+
+# OUTPUTS:
+# engineContour is a numpy array with the following column format:
+# [R, Z]
+# engineProps is a numpy array with the following column format:
+# [R, Z, pip, aeat, mach, cf, ivac, isp, p, t, rho, h, u, mw, cp, gam, son,
+# vis, cond, pran, condfz, pranfz]
+
+# Run it!
+(engineContour, engineProps) = design_engine(3500, 18, 6)
+
+# See a specific value (change the 10 to the index of the property you want to see):
+plt.plot(engineProps[:, 1], engineProps[:, 10])
+plt.show()
