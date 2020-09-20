@@ -34,10 +34,15 @@ Good news is that this doesn’t matter. I don’t know what causes this, but th
 
 If you run into any other issues with installation let me know and we can work through them.
 
-# Usage
+# Design an Engine
 
 Now just navigate to the directory where you’ve saved the code and run:
 
 $ python engine_designer.py 
 
-This will generate an engine geometry and combustion gas property array based on your chosen parameters. To edit those input parameters, you will need to modify these scripts in the text editor of your choice.
+This will generate an engine geometry and combustion gas property array based on your chosen parameters. To edit those input parameters, you can change the input parameters in engine_designer.py in the text editor of your choice.
+
+# Run Regen Analysis
+NOTE: Currently this script is under development so documentation and organization are not ideal. If you want to play with it you can run the regen.py file or each of the regenAnalysis files.
+
+Further direction and explanation about these scripts will be included in future versions.
