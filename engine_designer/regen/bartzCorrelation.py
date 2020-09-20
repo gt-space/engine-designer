@@ -1,5 +1,28 @@
 
-def Bartz(engineProps, bartzData, i):
+def Bartz(engine, T_wg, i):
+    # DUE TO BARTZ CORRELATION BEING DEVELOPED IN ENGLISH UNITS, VALUES
+    # CONVERTED TO ENGLISH UNITS IN EQUATIONS BELOW THEN RECONVERTED
+    g = 32.174 # Gravity, ft/s^2
+    T_wg = T_wg * 1.8 # Convert K to R (initial guess for finding coolant temps)
+    C_star = engine.C_star * 3.28084 # Convert m/s to ft/s
+    R_tCurve = engine.R_tCurve * 39.3701 # Convert m to in
+    R_t = engine.R_t * 39.3701 # Convert m to in
+    P_c = engine.P_inj_psi # Injector face pressure in psi
+    T_c0 = engine.engineProps[0,9] * 1.8 # Convert K to R
+    gam0 = engine.engineProps[0,15] # Chamber stagnation gamma
+        # !!! LOOK INTO THIS. cp_ns probably needs a more general assignment
+        # Old cp_ns - new estimate used as 2.2 KJ/Kg*K - correlation to come later
+        # NOTE: Effective specific heat used (instead of Frozen)
+        # cp_ns = engineProps(1,15).*0.23884; %Convert from Joules to BTU/lb*F
+    cp_ns = 2.2 * 0.23884 # Convert from Kilo-Joules to BTU/lb*F
+        # Originally used effective prandtl number from CEA, switched to gamma
+        # correlation
+    # praneff_ns2 = engine.engineProps[0,21] # No conversion needed
+    praneff_ns = (4*gam0)/(9*gam0-5)
+    visc_ns = (engine.engineProps[0,17]/1000) * (0.0672/12) # Convert to Poise then to lb/in-s
+
+    bartzData = [T_wg, T_c0, R_t, P_c, C_star, R_tCurve, praneff_ns, visc_ns, cp_ns, g]
+
     # unpack data
     T_wg = bartzData[0]
     T_c0 = bartzData[1]
@@ -13,9 +36,9 @@ def Bartz(engineProps, bartzData, i):
     g = bartzData[9]
 
     # Run Bartz Correlation
-    gam = engineProps[i, 15] #Index gamma; No conversion needed
-    mach = engineProps[i, 5]
-    contourR = engineProps[i, 0] * 39.3701 #Convert to Inches
+    gam = engine.engineProps[i, 15] #Index gamma; No conversion needed
+    mach = engine.engineProps[i, 5]
+    contourR = engine.engineProps[i, 0] * 39.3701 #Convert to Inches
     T_aw = T_c0 * (1 + (praneff_ns**(1/3)) * ((gam - 1)/2) * (mach**2))/(1 + ((gam - 1)/2) * (mach**2))
     #Sigma = sigA * sigB - Split into Terms for readability
     sigA = (0.5 * (T_wg/T_c0) * (1 + ((gam - 1)/2) * mach**2) + 0.5)**(-0.68)

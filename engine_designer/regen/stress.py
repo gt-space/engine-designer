@@ -1,7 +1,7 @@
 import math
 from .findPrinciples import findPrinciples
 
-def fos(R, t, meanT, dT):
+def get_fos(R, t, meanT, dT):
     # Constants
     # si units
     Di = R / 2  # Diameter of engine station
@@ -12,7 +12,7 @@ def fos(R, t, meanT, dT):
     Patm = 101325 # Atmospheric pressure in Pa
     Pi = 1.793e+6 # Gas pressure (Pa)
     Po = 2.344e+6 # Coolant pressure (Pa) P_waterflow = 137895 Pa; P_fuel_run = 2.344e+6
-    F_nozzle = -3336.17 # Thrust
+    F_nozzle = -3336.17 # Thrust (N)
 
     # Thermal Stresses
     # Props from http://www-ferp.ucsd.edu/LIB/PROPS/PANOS/cu.html
@@ -24,7 +24,6 @@ def fos(R, t, meanT, dT):
     kd_factor = 103 / 276 # Tmax = 204C
     Sy = 1570.3 - 14.184 * meanT + 5.641e-2 * meanT**2 - 1.0592e-4 * meanT**3 + 9.2881e-8 * meanT**4 - 3.086e-11 * meanT**5 # MPA Cu Annealed yield strength (MPa)
     Su = 191.31 + 0.65634 * meanT -1.85e-3 * meanT**2 + 1.0185e-6 * meanT**3 # MPA Cu Annealed ultimate strength (MPa)
-    fos_desired = 1.1 # Factor of safety desired
     Kt = 1
     k_cond = 330 # k_cond_Cu110 = 330
 

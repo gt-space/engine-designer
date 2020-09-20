@@ -25,11 +25,11 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
-import dataCollectionScript as dc
-from bartzCorrelation import Bartz
-from jetAProps import getProps
-from pressureDrop import pressureDrop
-from stress import fos
+from engine_designer.dataCollectionScript import Engine
+from .bartzCorrelation import Bartz
+from .jetAProps import getProps
+from .pressureDrop import pressureDrop
+from .stress import get_fos
 
 np.set_printoptions(threshold=sys.maxsize) # Print full arrays for debugging
 
@@ -126,7 +126,7 @@ def design_regen_rat():
                 Pr_c = viscK_c * rho_c * C_pc / cond_c # Coolant Prandtl Number
 
                 # Geometric Parameters (AT STATION, NOT SUM) !!! Double check these !!!
-                L_cor = chh + fw/2 # Corrected channel height for fin efficiency calcs
+                L_cor = chh # Corrected channel height for fin efficiency calcs
                 perim_conf = 2 * length + 2 * fw # Contact perimeter for fin efficiency calcs
                 A_conf = length * fw #contact area for fin efficiency calcs
                 A_fin = 2 * L_cor * length # Area of single fin in analysis segment, corrected for adiabatic tip
@@ -152,8 +152,10 @@ def design_regen_rat():
                     else:
                         if q_ge > q_ce:
                             T_wg = T_wg + (50 * err) #Increase T_wg since coolant can't draw enough heat
-                        elif q_ce>q_ge:
+                        elif q_ce > q_ge:
                             T_wg = T_wg - (50 * err) #Decrease T_wg since coolant can draw more heat
+                biot = h_c * (fw/2) / cond_w #Check if we can assume isotherms within fins
+                # print(biot)
                 meanT = (T_wg + T_wc) / 2 # Mean temp for stress calculations (K)
                 dT = T_wg - T_wc # Temp difference for stress calculations (K)
                 (ny_conserv, ny_precise, nu_conserv, nu_precise) = fos(R, wall_t, meanT, dT)

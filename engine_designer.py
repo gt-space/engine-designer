@@ -2,7 +2,7 @@ from engine_designer.dataCollectionScript import Engine
 import matplotlib.pyplot as plt
 
 # USAGE:
-# (engineContour, engineProps) = design_engine(thrust_nom, P_inj, conRat, MR, divAng)
+# design_engine(thrust_nom, P_inj, conRat, MR, divAng)
 # thrust_nom: Design thrust (N)
 # P_inj: Injector face pressure (Bar)
 # conRat: Enigne contraciton ratio
