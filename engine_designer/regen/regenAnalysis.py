@@ -35,7 +35,7 @@ np.set_printoptions(threshold=sys.maxsize) # Print full arrays for debugging
 
 class regenJacket:
     # Initialize the jacket object upon declaration
-    def __init__(self, engine, channel_h=0.001, wall_t=0.001, min_fos=1.25, min_fin_w = 0.001, min_channel_w = 0.001, T_wg=700):
+    def __init__(self, engine, channel_h=0.001, wall_t=0.001, min_fos=1.0, min_fin_w = 0.001, min_channel_w = 0.001, T_wg=700):
         self.engine = engine # Engine object to be jacketed
         self.channel_h = channel_h # Channel height (m)
         self.wall_t = wall_t # Inner wall thickness (m)
@@ -156,6 +156,11 @@ class regenJacket:
                     # fin_w = fin_w * (fos_delta + 1) # Increase fin width (not recommended)
                     (fos, num_channels) = critical_fos(i, channel_w, fin_w) # Recalculate FOS
                     fos_delta = fos - self.min_fos # How much fos buffer we have
+                    # Make sure fin width doesn't get too small
+                    if fin_w <= self.min_fin_w:
+                        fin_w = self.min_fin_w
+                        channel_w = 2 * math.pi * (critical_values[i][1] + self.wall_t) / num_channels - fin_w
+                        break
             # Round channel number to integer and accomidate with fin width
             circum = 2 * math.pi * (critical_values[i][1] + self.wall_t)
             num_channels = round(num_channels)
@@ -166,7 +171,7 @@ class regenJacket:
             print(channel_w, fin_w, fos)
             return num_channels
 
-        def get_station_dimensions(i, num_channels):
+        def get_critical_dimensions(i, num_channels):
             # Calculate dimensions for critical stations other than throat (barrel and exit)
             channel_w = self.min_channel_w # Set initial channel width to optimal value
             fin_w = (2 * math.pi * (critical_values[i][1] + self.wall_t) - (num_channels * channel_w))/num_channels # Solve for fin width given channel number and channel width
@@ -193,8 +198,40 @@ class regenJacket:
             critical_values[i].append(fos)
             print(channel_w, fin_w, fos)
 
+        def get_all_dimensions():
+
+            # Construct geometry for remaining stations
+            profile = np.zeros([np.size(self.engine.engineProps, 0), 3])
+            profile[:,0] = self.engine.engineProps[:,0]
+            barrel_end = len(self.engine.chBarrel) # Index where constant raidus ends
+            for i in range(np.size(profile, 0)):
+                # In barrel
+                if i <= barrel_end:
+                    profile[i,1] = critical_values[2][3] # Assign channel width
+                    profile[i,2] = critical_values[2][4] # Assign fin width
+                # Converging section
+                elif i < barrel_end + self.engine.throatInd:
+                    delta_w = critical_values[2][3] - critical_values[1][3]
+                    channel_w = profile[i,1] = critical_values[2][3] - (delta_w) * (i-100)/self.engine.throatInd
+                    fin_w = 2 * math.pi * (self.engine.engineProps[i,0] + self.wall_t) / num_channels - channel_w
+                    profile[i,1] = channel_w
+                    profile[i,2] = fin_w
+                # Diverging section
+                else:
+                    delta_w = critical_values[1][3] - critical_values[0][3]
+                    channel_w = profile[i,1] = critical_values[1][3] - (delta_w) * (i-(100 + self.engine.throatInd))/(self.engine.throatInd + 100)
+                    fin_w = 2 * math.pi * (self.engine.engineProps[i,0] + self.wall_t) / num_channels - channel_w
+                    profile[i,1] = channel_w
+                    profile[i,2] = fin_w
+            return profile
+
         critical_values = temp_sim() # Solve for cirical station coolant temperatures
         num_channels = get_throat_dimensions()
-        get_station_dimensions(0, num_channels)
-        get_station_dimensions(2, num_channels)
-        print(critical_values)
+        get_critical_dimensions(0, num_channels)
+        get_critical_dimensions(2, num_channels)
+        profile = get_all_dimensions()
+        # print(critical_values)
+
+        print(profile)
+        plt.plot(profile[:,2])
+        plt.show()
