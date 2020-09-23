@@ -1,7 +1,7 @@
 import math
 from .findPrinciples import findPrinciples
 
-def get_fos(R, t, meanT, dT):
+def get_fos_2(R, t, meanT, wallT, dT):
     # Constants
     # si units
     Di = R * 2  # Diameter of engine station
@@ -19,11 +19,13 @@ def get_fos(R, t, meanT, dT):
     alpha = (13.251 + 6.903e-3 * meanT + 8.53063e-7 * meanT) * 10**-6 # CTE Currenty taking mean value
     E = 129.8e9 # al 6061 E = 68.9e9 Pa, al 7075 E = 71.7e9 Pa
     v = 0.34 # Possions ratio
-    sigma_thermal = (2 * alpha * E * dT/((1 - v))) / 1000000
-    # print(sigma_thermal, alpha)
+    sigma_dT = -(2 * alpha * E * dT/(1 - v)) / 1000000 # This is both tensile and compressive,
+    # but we use compressive since that will be where wall has max stress
+    sigma_rel = -E * alpha * (meanT - 298) / 1000000 # Compressive stress due to expansion of relatively hotter copper
+    # print(sigma_dT, sigma_rel)
 
     kd_factor = 103 / 276 # Tmax = 204C
-    Sy = 1570.3 - 14.184 * meanT + 5.641e-2 * meanT**2 - 1.0592e-4 * meanT**3 + 9.2881e-8 * meanT**4 - 3.086e-11 * meanT**5 # MPA Cu Annealed yield strength (MPa)
+    Sy = 1570.3 - 14.184 * wallT + 5.641e-2 * wallT**2 - 1.0592e-4 * wallT**3 + 9.2881e-8 * wallT**4 - 3.086e-11 * wallT**5 # MPA Cu Annealed yield strength (MPa)
     Su = 191.31 + 0.65634 * meanT -1.85e-3 * meanT**2 + 1.0185e-6 * meanT**3 # MPA Cu Annealed ultimate strength (MPa)
     Kt = 1
     k_cond = 330 # k_cond_Cu110 = 330
@@ -32,27 +34,40 @@ def get_fos(R, t, meanT, dT):
 
     # thick-walled vessel
     def sigma_t(r):
-        # Calculate the tension stress of the chamber wall (Pa)
+        # Calculate the tension stress of the chamber wall due to pressure (Pa)
          return (Pi * ri**2 - Po * ro**2 - (ri**2) * (ro**2) * (Po - Pi) / r**2) / (ro**2 - ri**2)
     def sigma_r(r):
-        # Calculate the radial stress of the chamber wall (Pa)
+        # Calculate the radial stress of the chamber wall due to pressure (Pa)
          return (Pi * ri**2 - Po * ro**2 + (ri**2) * (ro**2) * (Po - Pi) / r**2) / (ro**2 - ri**2)
     sigma_l = F_nozzle / (math.pi * (ro**2 - ri**2))
 
     # thin-walled approximation
     def sigma_t_approx(t):
         # Hoop stress for a thin wall (D/t > 30) can be approximated with the following
+        # Conservative estimate... assumes coolant pressure acts on entire jacket which it wouldn't
         return (Pi - Po) * (Di + t)/(2 * t)
 
     sigma_hoop = sigma_t_approx(t) / 1000000 # Pa to MPa
+    # print(sigma_hoop)
+    # print(sigma_hoop)
 
     # Constants
     sigma_x = sigma_l / 1000000 # Pa to MPa
-    sigma_y = sigma_t(r_max) / 1000000 + sigma_thermal # Pa to MPa
+    sigma_y = sigma_t(r_max) / 1000000 + sigma_dT # Pa to MPa
     sigma_z = sigma_r(r_max) / 1000000 # Pa to MPa
     tau_xy = 0
     tau_yz = 0
     tau_zx = 0
+
+    # Here is where I disagree with the other analysis. If the material is yielding then we should expect to see
+    # stress flatten out after the elastic region has been passed.
+    if sigma_x > Sy:
+        sigma_x = Sy
+    if sigma_y > Sy:
+        sigma_y = Sy
+    if sigma_z > Sy:
+        sigma_z = Sy
+
 
     # Cubic Function
     def f(sigma):
@@ -64,8 +79,10 @@ def get_fos(R, t, meanT, dT):
     # Principle shears ()
     tau_12 = (sigma_1 - sigma_2) / 2
     tau_23 = (sigma_2 - sigma_3) / 2
-    tau_13 = (sigma_1 - sigma_3) / 8
+    tau_13 = (sigma_1 - sigma_3) / 2 # This is 8 in the other script but idk why
 
+    # print(tau_12, tau_23, tau_13)
+    # print(wallT, meanT)
     # Maximum Shear Stress Yield Criterion
     def ny_max_shear(Sy, s1, s3):
         return Sy/(s1 - s3)
@@ -80,5 +97,5 @@ def get_fos(R, t, meanT, dT):
 
     nu_conserv = ny_max_shear(Su, sigma_1, sigma_3)
     nu_precise = ny_dist_eng(Su, sigma_1, sigma_2, sigma_3)
-
+    # print(Sy, meanT)
     return (ny_conserv, ny_precise, nu_conserv, nu_precise)

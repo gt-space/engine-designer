@@ -30,12 +30,13 @@ from .bartzCorrelation import Bartz
 from .jetAProps import getProps
 from .pressureDrop import pressureDrop
 from .stress import get_fos
+from .stress_v2 import get_fos_2
 
 np.set_printoptions(threshold=sys.maxsize) # Print full arrays for debugging
 
 class regenJacket:
     # Initialize the jacket object upon declaration
-    def __init__(self, engine, channel_h=0.001, wall_t=0.001, min_fos=1.0, min_fin_w = 0.001, min_channel_w = 0.001, T_wg=700):
+    def __init__(self, engine, channel_h=0.001, wall_t=0.001, min_fos=1.2, min_fin_w = 0.001, min_channel_w = 0.0015875/2, T_wg=700):
         self.engine = engine # Engine object to be jacketed
         self.channel_h = channel_h # Channel height (m)
         self.wall_t = wall_t # Inner wall thickness (m)
@@ -134,8 +135,9 @@ class regenJacket:
             # print(biot)
             meanT = (self.T_wg + T_wc) / 2 # Mean temp for stress calculations (K)
             dT = self.T_wg - T_wc # Temp difference for stress calculations (K)
-            (ny_conserv, ny_precise, nu_conserv, nu_precise) = get_fos(R, self.wall_t, meanT, dT)
-            # print(T_cb, meanT, nu_precise, round(num_channels))
+            # (ny_conserv, ny_precise, nu_conserv, nu_precise) = get_fos(R, self.wall_t, meanT, dT)
+            (ny_conserv, ny_precise, nu_conserv, nu_precise) = get_fos_2(R, self.wall_t, meanT, self.T_wg, dT)
+            # print(T_cb)
             fos = nu_conserv
 
             return (fos, num_channels)
@@ -152,7 +154,7 @@ class regenJacket:
             else:
                 fos_delta = fos - self.min_fos # How much fos buffer we have
                 while fos_delta > 0.001:
-                    channel_w = channel_w * (fos_delta + 1) # Increase channel width
+                    channel_w = channel_w * (0.3 * fos_delta + 1) # Increase channel width
                     # fin_w = fin_w * (fos_delta + 1) # Increase fin width (not recommended)
                     (fos, num_channels) = critical_fos(i, channel_w, fin_w) # Recalculate FOS
                     fos_delta = fos - self.min_fos # How much fos buffer we have
@@ -184,7 +186,7 @@ class regenJacket:
             else:
                 fos_delta = fos - self.min_fos # How much fos buffer we have
                 while fos_delta > 0.001:
-                    channel_w = channel_w * (fos_delta + 1) # Increase channel width
+                    channel_w = channel_w * (0.1 * fos_delta + 1) # Increase channel width
                     fin_w = w_sum - channel_w # Get fin width
                     (fos, num_channels) = critical_fos(i, channel_w, fin_w) # Recalculate FOS
                     fos_delta = fos - self.min_fos # How much fos buffer we have
@@ -226,12 +228,13 @@ class regenJacket:
             return profile
 
         critical_values = temp_sim() # Solve for cirical station coolant temperatures
-        num_channels = get_throat_dimensions()
-        get_critical_dimensions(0, num_channels)
-        get_critical_dimensions(2, num_channels)
-        profile = get_all_dimensions()
         # print(critical_values)
+        num_channels = get_throat_dimensions()
+        get_critical_dimensions(0, num_channels) # barrel
+        get_critical_dimensions(2, num_channels) # exit
+        profile = get_all_dimensions()
 
         print(profile)
-        plt.plot(profile[:,2])
-        plt.show()
+        # print(self.engine.engineProps)
+        # plt.plot(profile[:,2])
+        # plt.show()
