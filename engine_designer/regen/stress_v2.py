@@ -25,12 +25,12 @@ def get_fos_2(R, t, meanT, wallT, dT):
     # print(sigma_dT, sigma_rel)
 
     kd_factor = 103 / 276 # Tmax = 204C
-    Sy = 1570.3 - 14.184 * wallT + 5.641e-2 * wallT**2 - 1.0592e-4 * wallT**3 + 9.2881e-8 * wallT**4 - 3.086e-11 * wallT**5 # MPA Cu Annealed yield strength (MPa)
-    Su = 191.31 + 0.65634 * meanT -1.85e-3 * meanT**2 + 1.0185e-6 * meanT**3 # MPA Cu Annealed ultimate strength (MPa)
+    Sy = (1570.3 - 14.184 * wallT + 5.641e-2 * wallT**2 - 1.0592e-4 * wallT**3 + 9.2881e-8 * wallT**4 - 3.086e-11 * wallT**5) # MPA Cu Annealed yield strength (MPa)
+    Su = (191.31 + 0.65634 * meanT -1.85e-3 * meanT**2 + 1.0185e-6 * meanT**3) # MPA Cu Annealed ultimate strength (MPa)
     Kt = 1
     k_cond = 330 # k_cond_Cu110 = 330
-
     # STRESS CALCULATIONS
+    print(Sy, Su)
 
     # thick-walled vessel
     def sigma_t(r):
@@ -48,26 +48,24 @@ def get_fos_2(R, t, meanT, wallT, dT):
         return (Pi - Po) * (Di + t)/(2 * t)
 
     sigma_hoop = sigma_t_approx(t) / 1000000 # Pa to MPa
-    # print(sigma_hoop)
-    # print(sigma_hoop)
 
     # Constants
     sigma_x = sigma_l / 1000000 # Pa to MPa
-    sigma_y = sigma_t(r_max) / 1000000 + sigma_dT # Pa to MPa
+    sigma_y = sigma_t(r_max) / 1000000 - sigma_dT - sigma_rel # Pa to MPa
     sigma_z = sigma_r(r_max) / 1000000 # Pa to MPa
     tau_xy = 0
     tau_yz = 0
     tau_zx = 0
+    # print(sigma_y, sigma_dT)
 
     # Here is where I disagree with the other analysis. If the material is yielding then we should expect to see
     # stress flatten out after the elastic region has been passed.
-    if sigma_x > Sy:
+    if sigma_x < Sy:
         sigma_x = Sy
-    if sigma_y > Sy:
+    if sigma_y < Sy:
         sigma_y = Sy
-    if sigma_z > Sy:
+    if sigma_z < Sy:
         sigma_z = Sy
-
 
     # Cubic Function
     def f(sigma):
@@ -81,7 +79,6 @@ def get_fos_2(R, t, meanT, wallT, dT):
     tau_23 = (sigma_2 - sigma_3) / 2
     tau_13 = (sigma_1 - sigma_3) / 2 # This is 8 in the other script but idk why
 
-    # print(tau_12, tau_23, tau_13)
     # print(wallT, meanT)
     # Maximum Shear Stress Yield Criterion
     def ny_max_shear(Sy, s1, s3):

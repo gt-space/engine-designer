@@ -19,7 +19,11 @@ import matplotlib.pyplot as plt
 # Run it!
 engine = Engine(3500, 18, 6)
 engine.design_engine()
+# print(engine.engineProps)
 
 # See a specific value (change the 10 to the index of the property you want to see):
-plt.plot(engine.engineProps[:, 1], engine.engineProps[:, 10])
+plt.plot(engine.engineProps[:, 1], engine.engineProps[:, 0])
+plt.xlabel('Distance from Injector (m)', fontsize=16)
+plt.ylabel('Radius (m)', fontsize=16)
+plt.ylim([0,0.1])
 plt.show()

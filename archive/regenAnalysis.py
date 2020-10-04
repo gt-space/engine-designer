@@ -31,7 +31,6 @@ from .jetAProps import getProps
 from .pressureDrop import pressureDrop
 from .stress import get_fos
 from .stress_v2 import get_fos_2
-from .strain import get_strain
 
 np.set_printoptions(threshold=sys.maxsize) # Print full arrays for debugging
 
@@ -136,11 +135,10 @@ class regenJacket:
             # print(biot)
             meanT = (self.T_wg + T_wc) / 2 # Mean temp for stress calculations (K)
             dT = self.T_wg - T_wc # Temp difference for stress calculations (K)
-            (ny_conserv, ny_precise, nu_conserv, nu_precise) = get_fos(R, self.wall_t, meanT, dT)
-            # (ny_conserv, ny_precise, nu_conserv, nu_precise) = get_fos_2(R, self.wall_t, meanT, self.T_wg, dT)
+            # (ny_conserv, ny_precise, nu_conserv, nu_precise) = get_fos(R, self.wall_t, meanT, dT)
+            (ny_conserv, ny_precise, nu_conserv, nu_precise) = get_fos_2(R, self.wall_t, meanT, self.T_wg, dT)
             # print(T_cb)
             fos = nu_conserv
-            get_strain(R, self.wall_t, meanT, dT, channel_w)
 
             return (fos, num_channels)
 

@@ -12,7 +12,7 @@ def get_fos(R, t, meanT, dT):
     Patm = 101325 # Atmospheric pressure in Pa
     Pi = 1.793e+6 # Gas pressure (Pa)
     Po = 2.344e+6 # Coolant pressure (Pa) P_waterflow = 137895 Pa; P_fuel_run = 2.344e+6
-    F_nozzle = -3336.17 # Thrust (N)
+    F_nozzle = -3500 # Thrust (N)
 
     # Thermal Stresses
     # Props from http://www-ferp.ucsd.edu/LIB/PROPS/PANOS/cu.html
