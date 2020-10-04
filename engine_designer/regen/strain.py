@@ -29,6 +29,6 @@ def get_strain(R, t, meanT, dT, channel_w):
     strain = strain_t1 + strain_t2 + strain_p
 
     cycle_limit = -strain_max/strain # Extremely conservative cycle limit (likely capable of 4x cycles)
-    print("Strain: " + str(strain), "Cycle Limit:" + str(cycle_limit))
+    # print("Strain: " + str(strain), "Cycle Limit:" + str(cycle_limit))
 
     return strain

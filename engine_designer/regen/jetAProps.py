@@ -34,6 +34,6 @@ def getProps(T_cb):
     condSlope = -0.000175
     cond_c = condSlope * (Tc_cel - 20) + 1.1150 #W/mK
 
-    viscK_c = 2.3498 / 1000000 #Specific val for ex. Will need to set up interpolation system (mm^2/s => m^2/s)
+    viscK_c = 2.3498 / 1000000 # Specific val for ex. Will need to set up interpolation system (mm^2/s => m^2/s)
 
     return (rho_c, C_pc, cond_c, viscK_c)
