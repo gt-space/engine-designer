@@ -98,3 +98,8 @@ class Engine:
 
         # Generate engine property array from helper function
         self.engineProps = getProps(self.chBarrel, self.nozzleContour, self.throatInd, ispObj, self.P_inj_psi, self.MR, self.A_t)
+
+        # Check for bad design (This occurs when thrust is way higher than chamber pressure should be and barrel becomes negative)
+        if self.chBarrel[1,1] < 0:
+            raise Exception("Thrust is too high for given chamber pressure to create a geometry with this method. \
+                Try lowering thrust, increasing chamber pressure and/or decreasing contraction ratio.")

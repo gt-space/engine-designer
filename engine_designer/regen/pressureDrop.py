@@ -2,11 +2,10 @@
 from .colebrook import colebrook
 
 
-def pressureDrop(CSA, perim, mDot_chan, rho_c, len, viscK_c):
+def pressureDrop(CSA, d_hyd, mDot_chan, rho_c, len, viscK_c):
     # pressureDrop - Calculate pressure drop in coolant passage
 
     epsilon = 0.005 * (10 ** (-3)) #Surface roughness, guess based on our manufacuting capability, mm
-    d_hyd = 4 * CSA / perim #Equivalent hydraulic diameter of coolant passage
     K = epsilon / d_hyd
     w_c = mDot_chan/(rho_c * CSA) #Coolant Velocity
 

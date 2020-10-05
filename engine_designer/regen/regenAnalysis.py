@@ -32,7 +32,7 @@ np.set_printoptions(threshold=sys.maxsize) # Print full arrays (for debugging)
 
 class regenJacket:
     # Initialize the jacket object upon declaration
-    def __init__(self, engine, channel_h=0.002, wall_t=0.001, min_fin_w = 0.001, min_channel_w = 0.0015875, T_wg=700, T_co=410):
+    def __init__(self, engine, channel_h=0.002, wall_t=0.001, min_fin_w = 0.001, min_channel_w = 0.0015875, T_wg=700, T_co=450):
         self.engine = engine # Engine object to be jacketed
         self.channel_h = channel_h # Channel height (m)
         self.wall_t = wall_t # Inner wall thickness (m)
@@ -40,7 +40,7 @@ class regenJacket:
         self.min_channel_w = min_channel_w # Minimum manufacutrable channel width (m)
         self.T_wg = T_wg # Gas-side wall temperature initial estimate (K)
         self.T_co = T_co # Desired coolant outlet temperature (K)
-        self.T_max = 1200 # Max allowed temp for material (copper melts at 1358 K)
+        self.T_max = 1100 # Max allowed temp for material (copper melts at 1358 K)
 
     def get_geometry(self):
 
@@ -164,7 +164,7 @@ class regenJacket:
         def full_sim(num_channels):
             # Run full simulation of generated geometry to get coolant temp increase and pressure loss
             T_cb = T_ci # Initial bulk temp (K)
-            T_wg = self.T_wg # Initialize gas side wall temp to desired temp
+            P_c = self.engine.P_inj * 1.2 # Initial coolant pressure (bar) 1.2 included as stiffness
             wall_temps = np.zeros([numPTS,1])
             for x in range(numPTS):
                 i = numPTS - x - 1 # Reverse order
@@ -177,6 +177,7 @@ class regenJacket:
 
                 q_in = 1 # bs initlialization
                 q_out = 2 # bs initlialization
+                T_wg = self.T_wg # Initialize gas side wall temp to desired temp
                 # Converge on channel width and gas side wall temp
                 while abs((q_in-q_out)/q_in) > 0.001:
                     (h_g, qdot_ge, T_aw) = Bartz(self.engine, T_wg, i)
@@ -188,7 +189,8 @@ class regenJacket:
                     Pr_c = viscK_c * rho_c * C_pc / cond_c # Coolant Prandtl Number
                     h_c = 0.021 * (Re_c)**0.8 * (Pr_c)**0.4 * (0.64 + 0.36 * (T_cb/T_wc)) * (cond_c/D_hyd)
 
-                    length = 0.001 # Really doesn't impact anything but used in fin calcs. Could be set to anything
+                    if i > 0:
+                        length = self.engine.engineProps[i,1] - self.engine.engineProps[i-1,1]
                     perim_conf = 2 * length # Contact perimeter for fin efficiency calcs
                     A_conf = length * self.min_fin_w # Contact area for fin efficiency calcs
                     A_fin = 2 * self.channel_h * length # Area of single fin in analysis segment
@@ -204,19 +206,22 @@ class regenJacket:
                     q_out = h_c * (T_wc - T_cb) * A_totc * eta_tot # Total heat transfer = flux * effective area
                     q_in = qdot_ge * A_totg
 
+                    # print(T_wg, q_in, q_out)
                     # If too much heat is entering
                     if q_in > q_out:
-                        T_wg = T_wg * 1.0001
+                        T_wg = T_wg * (1+0.1*abs((q_in-q_out)/(q_in+q_out)))
                     # If too little is entering
                     else:
-                        T_wg = T_wg * 0.9999
+                        T_wg = T_wg * (1-0.1*abs((q_in-q_out)/(q_in+q_out)))
 
                 dT_c = ((q_in + q_out)/2)/(C_pc * mDot) # Temperature change in coolant
                 T_cb += dT_c
                 wall_temps[i,0] = T_wg
                 strain = get_strain(R, self.wall_t, (T_wg+T_wc)/2, T_wg-T_wc, channel_w) # Should be pretty low
+                dP = pressureDrop(A_cc, D_hyd, mDot_chan, rho_c, length, viscK_c)
+                P_c += dP/100000
                 # print(T_wg, qdot_ge, T_cb, channel_w)
-            return (T_cb, wall_temps)
+            return (T_cb, P_c, wall_temps)
 
         # Main loop
         while True:
@@ -226,17 +231,20 @@ class regenJacket:
             get_critical_dimensions(2, num_channels) # Barrel
             # print(critical_values)
             profile = get_all_dimensions()
-            (T_co, wall_temps) = full_sim(num_channels)
+            (T_co, P_c, wall_temps) = full_sim(num_channels)
             # print(T_co, self.T_wg)
             # Increase wall gas temp if coolant outlet is too hot
             if T_co > self.T_co and self.T_wg < self.T_max:
                 self.T_wg = self.T_wg * 1.05
+                # Stop at max acceptable gas wall temp
                 if self.T_wg > self.T_max:
                     self.T_wg = self.T_max
                     print("Max wall temps reached. Coolant outlet temp cannot be further minimized.")
             else:
                 break
-        print("Analysis Complete. Coolant Outlet temp: " + str(T_co))
+            print("Iteration complete")
+        print("-<=Analysis Complete=>-\nCoolant Outlet Temp: " + str(T_co) + "\nRequired Coolant Inlet Pressure: " + str(P_c))
+        # print(self.engine.engineProps)
 
         # USEFUL PLOTS:
         # Channel Width
