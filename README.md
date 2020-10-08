@@ -43,6 +43,27 @@ $ python engine_designer.py
 This will generate an engine geometry and combustion gas property array based on your chosen parameters. To edit those input parameters, you can change the input parameters in engine_designer.py in the text editor of your choice.
 
 # Run Regen Analysis
-NOTE: Currently this script is under development so documentation and organization are not ideal. If you want to play with it you can run the regen.py file or each of the regenAnalysis files.
+This part of the script generates a channel profile for the regenerative cooling system. To run it:
 
-Further direction and explanation about these scripts will be included in future versions.
+$ python regen.py
+
+This returns an array defining the channel contour (the fin and channel widths at many points along the engine), and prints out the coolant outlet temperature and required inlet pressure.
+
+How it works:
+1. The user selects an initial gas side wall temp, min fin width, and desired coolant outlet temp. To edit these values, pass them in as parameters to the jacket object. You can see their ordering in the regenAnalysis.py init method.
+2. get_coolant_temps() finds an estimate for coolant bulk temperature at throat, exit, and injector plane.
+   a. Assumes a linear increase in temp (based on prior runs this is reasonable)
+3. get_critical_dimensions() takes these coolant bulk temperatures and uses them to converge on the channel width for steady state 1D heat transfer through the wall (at each of those three stations).
+   a. This width is contstrained by minimium fin and channel widths specified in the jacket object's initialization
+   b. If the channel width can't get any smaller, the wall temp must increase to compensate.
+4. get_all_dimensions() stitches together the geometry to generate a full contour
+5. full_sim() simulates this full contour and determines the outlet temp and inlet pressure
+   a. Solve for coolant convection coefficient
+   b. Pick gas side wall temp and converge on equilibrium
+   c. Solve for temperature increase
+   d. Solve for pressure loss
+6. The main loop checks if coolant outlet temp is too high, and if so it increases the gas side wall temp and repeats steps 2-5 until cooolant outlet temp is low enough or wall temps approach the limit defined in init.
+
+The strain at the inner wall is also calculated, but it's not used as a metric for optimizing the design since it is well within acceptable values for our expected range of operating cycles.
+
+I've done my best to comment these scripts, but some things might not be too clear. For further explanation feel free to message me.
