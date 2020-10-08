@@ -32,7 +32,7 @@ np.set_printoptions(threshold=sys.maxsize) # Print full arrays (for debugging)
 
 class regenJacket:
     # Initialize the jacket object upon declaration
-    def __init__(self, engine, channel_h=0.002, wall_t=0.001, min_fin_w = 0.001, min_channel_w = 0.0015875, T_wg=700, T_co=450):
+    def __init__(self, engine, channel_h=0.002, wall_t=0.001, min_fin_w = 0.001, min_channel_w = 0.0015875, T_wg=750, T_co=450):
         self.engine = engine # Engine object to be jacketed
         self.channel_h = channel_h # Channel height (m)
         self.wall_t = wall_t # Inner wall thickness (m)
@@ -48,6 +48,7 @@ class regenJacket:
         mDot = self.engine.mDot_f # Mass flow of coolant (kg/s)
         cond_w = 330 # W/m-k, copper conductivity
         T_ci = 280.15 # Coolant inlet temperature (K)
+        density = 8940 # Copper density (kg/m^3)
 
         # ==== Define Critical Points ====
         numPTS = np.size(self.engine.engineProps,0) # Number of engine stations
@@ -166,6 +167,7 @@ class regenJacket:
             T_cb = T_ci # Initial bulk temp (K)
             P_c = self.engine.P_inj * 1.2 # Initial coolant pressure (bar) 1.2 included as stiffness
             wall_temps = np.zeros([numPTS,1])
+            volume = 0 # To calculate mass of jacket (m^3) (may be used for future optimization)
             for x in range(numPTS):
                 i = numPTS - x - 1 # Reverse order
                 # Initialize parameters
@@ -190,7 +192,8 @@ class regenJacket:
                     h_c = 0.021 * (Re_c)**0.8 * (Pr_c)**0.4 * (0.64 + 0.36 * (T_cb/T_wc)) * (cond_c/D_hyd)
 
                     if i > 0:
-                        length = self.engine.engineProps[i,1] - self.engine.engineProps[i-1,1]
+                        length = self.engine.engineProps[i,1] - self.engine.engineProps[i-1,1] # Height between stations
+                        length = math.sqrt(length**2 + (R - profile[i-1,0])**2) # Account for angle at station
                     perim_conf = 2 * length # Contact perimeter for fin efficiency calcs
                     A_conf = length * self.min_fin_w # Contact area for fin efficiency calcs
                     A_fin = 2 * self.channel_h * length # Area of single fin in analysis segment
@@ -220,8 +223,10 @@ class regenJacket:
                 strain = get_strain(R, self.wall_t, (T_wg+T_wc)/2, T_wg-T_wc, channel_w) # Should be pretty low
                 dP = pressureDrop(A_cc, D_hyd, mDot_chan, rho_c, length, viscK_c)
                 P_c += dP/100000
+                volume = volume + (2*math.pi*R * self.wall_t + fin_w * self.channel_h * num_channels) * length
                 # print(T_wg, qdot_ge, T_cb, channel_w)
-            return (T_cb, P_c, wall_temps)
+            mass = volume * density
+            return (T_cb, P_c, wall_temps, mass)
 
         # Main loop
         while True:
@@ -231,7 +236,7 @@ class regenJacket:
             get_critical_dimensions(2, num_channels) # Barrel
             # print(critical_values)
             profile = get_all_dimensions()
-            (T_co, P_c, wall_temps) = full_sim(num_channels)
+            (T_co, P_c, wall_temps, mass) = full_sim(num_channels)
             # print(T_co, self.T_wg)
             # Increase wall gas temp if coolant outlet is too hot
             if T_co > self.T_co and self.T_wg < self.T_max:
@@ -242,9 +247,10 @@ class regenJacket:
                     print("Max wall temps reached. Coolant outlet temp cannot be further minimized.")
             else:
                 break
-            print("Iteration complete")
+            # print("Iteration complete")
         print("-<=Analysis Complete=>-\nCoolant Outlet Temp: " + str(T_co) + "\nRequired Coolant Inlet Pressure: " + str(P_c))
         # print(self.engine.engineProps)
+        print(mass)
 
         # USEFUL PLOTS:
         # Channel Width
@@ -252,9 +258,9 @@ class regenJacket:
         # plt.xlabel('Distance from Injector', fontsize=16)
         # plt.ylabel('Channel Width', fontsize=16)
         # Wall Temp
-        # plt.plot(wall_temps)
-        # plt.xlabel('Distance from Injector', fontsize=16)
+        # plt.plot(self.engine.engineProps[:,1], wall_temps)
+        # plt.xlabel('Distance from Injector (m)', fontsize=16)
         # plt.ylabel('Wall Temperature (K)', fontsize=16)
         # plt.show()
 
-        return profile
+        return (profile, T_co, mass)
