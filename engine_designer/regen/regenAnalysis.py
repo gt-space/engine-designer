@@ -32,7 +32,7 @@ np.set_printoptions(threshold=sys.maxsize) # Print full arrays (for debugging)
 
 class regenJacket:
     # Initialize the jacket object upon declaration
-    def __init__(self, engine, channel_h=0.002, wall_t=0.001, min_fin_w = 0.001, min_channel_w = 0.0015875, T_wg=750, T_co=450):
+    def __init__(self, engine, channel_h=0.002, wall_t=0.001, min_fin_w = 0.001, min_channel_w = 0.0015875, T_wg=750, T_co=650):
         self.engine = engine # Engine object to be jacketed
         self.channel_h = channel_h # Channel height (m)
         self.wall_t = wall_t # Inner wall thickness (m)

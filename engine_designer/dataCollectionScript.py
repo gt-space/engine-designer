@@ -40,7 +40,7 @@ class Engine:
 
     def design_engine(self):
         # ==== Propellants: Kerosene and Liquid Oxygen ====
-        self.LStar = 1.1 # Characteristic length (m)
+        self.LStar = 1.05 # Characteristic length (m)
         # ==== Define Constants ====
         self.g0 = 9.81 # Gravity (m/s^2)
         self.bar = 100000 # 1 Bar in Pa
