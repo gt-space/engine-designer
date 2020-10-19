@@ -1,5 +1,6 @@
 from engine_designer.dataCollectionScript import Engine
 import matplotlib.pyplot as plt
+import numpy as np
 
 # USAGE:
 # design_engine(thrust_nom, P_inj, conRat, MR, divAng)
@@ -27,3 +28,9 @@ plt.xlabel('Distance from Injector (m)', fontsize=16)
 plt.ylabel('Radius (m)', fontsize=16)
 # plt.ylim([0,0.1])
 plt.show()
+
+def create_csv(engine):
+    matrix = engine.engineProps[:, 0:2] # Radius and distance from injector matrix
+    np.savetxt("contour.csv", matrix, delimiter=",")
+
+# create_csv(engine)
