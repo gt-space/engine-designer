@@ -1,8 +1,11 @@
 def getProps(T_cb):
-    #Solve for fluid properties of Jet-A given temperature and
+    #jetAProps Solve for fluid properties of Jet-A given temperature and
     #pressure - No correlations are made to pressure but it will
     #be included for future development as compressibility effects are
     #considered
+
+    # Properties derived from 2 pt. linear correlation using DTIC A132106
+    # "Aviation Fuel Properties"
 
     #Solve for following properties:
     # - Density
@@ -10,19 +13,14 @@ def getProps(T_cb):
     # - Conductivity
     # - Specific heat
 
-    import math
-
     # https://tsapps.nist.gov/publication/get_pdf.cfm?pub_id=904848 See page 73
     Tc_cel = T_cb - 273.15 #Coolant temperature in celcius.
 
-    # Boiling point at 1 atm (conservative since BP increases with pressure)
-    T_boil = 462.039 # (K)
-
     # Density
     # Temperature in Celcius
-    # rho_288.7K = 0.811 kg/L
-    rhoSlope = -0.753846 # From old data. Would be nice to update
-    rho_c = rhoSlope * (T_cb - 288.7) + 848 #kg/m^3
+    # rho_90C = 750 kg/m^3, rho_-40C = 848 kg/m^3, Pg. 22
+    rhoSlope = -0.753846
+    rho_c = rhoSlope * (Tc_cel + 40) + 848 #kg/m^3
 
     # Specific Heat
     # Temperature in Celcius
@@ -36,8 +34,6 @@ def getProps(T_cb):
     condSlope = -0.000175
     cond_c = condSlope * (Tc_cel - 20) + 1.1150 #W/mK
 
-    # Kinematic viscosity
-    viscK_c = (11.5 / 1000000) * math.exp(-(T_cb-238.706)/60) # Taken at -30 F system (mm^2/s => m^2/s)
-        # 60 comes from decay rate of this data: # https://tsapps.nist.gov/publication/get_pdf.cfm?pub_id=904848 (page 73)
+    viscK_c = 2.3498 / 1000000 # Specific val for ex. Will need to set up interpolation system (mm^2/s => m^2/s)
 
     return (rho_c, C_pc, cond_c, viscK_c)
