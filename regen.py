@@ -57,7 +57,8 @@ def l_star():
         engine.design_engine() # Run engine design procedures
         jacket = regenJacket(engine) # Create jacket object
         (profile, T_co, mass) = jacket.get_geometry() # Generate channel geometry
-        print(T_co)
+        if (T_co > T_co_max) or L_star >= L_star_max:
+            break
     return L_star
 
 def regen(L_star):
