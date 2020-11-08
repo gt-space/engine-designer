@@ -8,8 +8,10 @@ def getContour(R_t, LStar, conRat, conAng, divAng, radRat, expRat):
     # LStar - L* Value (derived from Propellants)
     # conRat - Contraction Ratio for chamber
     # conAng - Convergence Angle for chamber
+    # divAng - Divergence Angle for exit
     # radRat - Radius Ratio conLeadInRadius/conLdRadMax for chamber convergence section lead in radius,
     # where R_cyl is the cylindrical chamber radius
+    # expRat - Expansion ratio for exit
 
     # ==== Size Chamber Parameters ====
     exitHalfAngle = divAng * math.pi / 180 #Nozzle Exit half angle, degrees to rad

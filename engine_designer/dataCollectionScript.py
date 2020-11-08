@@ -31,16 +31,16 @@ np.set_printoptions(threshold=sys.maxsize) #Print setting for debugging
 # conRat: Enigne contraciton ratio
 # divAng: Divergence half angle (Deg)
 class Engine:
-    def __init__(self, thrust_nom, P_inj, conRat, MR = 1.8, divAng = 15):
+    def __init__(self, thrust_nom, P_inj, conRat, MR = 2, LStar = 1.05, divAng = 15):
         self.thrust_nom = thrust_nom
         self.P_inj = P_inj
         self.conRat = conRat
         self.MR = MR
         self.divAng = divAng
+        self.LStar = LStar # Characteristic length (m)
 
     def design_engine(self):
         # ==== Propellants: Kerosene and Liquid Oxygen ====
-        self.LStar = 1.05 # Characteristic length (m)
         # ==== Define Constants ====
         self.g0 = 9.81 # Gravity (m/s^2)
         self.bar = 100000 # 1 Bar in Pa

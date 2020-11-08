@@ -17,10 +17,17 @@ import numpy as np
 # [R, Z, pip, aeat, mach, cf, ivac, isp, p, t, rho, h, u, mw, cp, gam, son,
 # vis, cond, pran, condfz, pranfz]
 
+thrust = 17792.89 # thrust (N)
+C_p = 48.2633 # chamber pressure (bar)
+conrat = 6
+LStar = 1.2
 # Run it!
-engine = Engine(3500, 18, 6)
+engine = Engine(thrust, C_p, conrat, LStar = LStar)
 engine.design_engine()
 # print(engine.engineProps[:,1])
+
+print(engine.A_t)
+print("C-star:", engine.C_star)
 
 # See a specific value (change the 0 to the index of the property you want to see):
 plt.plot(engine.engineProps[:, 1], engine.engineProps[:, 0])

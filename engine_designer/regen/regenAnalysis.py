@@ -48,7 +48,7 @@ class regenJacket:
         mDot = self.engine.mDot_f # Mass flow of coolant (kg/s)
         cond_w = 330 # W/m-k, copper conductivity
         T_ci = 280.15 # Coolant inlet temperature (K)
-        density = 8940 # Copper density (kg/m^3)
+        cu_density = 8940 # Copper density (kg/m^3)
 
         # ==== Define Critical Points ====
         numPTS = np.size(self.engine.engineProps,0) # Number of engine stations
@@ -223,10 +223,20 @@ class regenJacket:
                 strain = get_strain(R, self.wall_t, (T_wg+T_wc)/2, T_wg-T_wc, channel_w) # Should be pretty low
                 dP = pressureDrop(A_cc, D_hyd, mDot_chan, rho_c, length, viscK_c)
                 P_c += dP/100000
-                volume = volume + (2*math.pi*R * self.wall_t + fin_w * self.channel_h * num_channels) * length
+                volume += (2*math.pi*R * self.wall_t + fin_w * self.channel_h * num_channels) * length
                 # print(T_wg, qdot_ge, T_cb, channel_w)
-            mass = volume * density
+            mass = volume * cu_density
             return (T_cb, P_c, wall_temps, mass)
+
+        def outer_jacket(engine):
+            # Estimate mass of steel shell surroudning engine
+            st_density = 8050 # Density of steel (kg/m^3)
+            thickness = 0.005 # Thickenss of outer jacket (m)
+            R = engine.engineProps[0,0] + thickness/2 # Outer jacket radius (m)
+            length = engine.engineProps[199,1] # Jacket length (m)
+            vol = 2*math.pi*R * thickness * length # Outer jacket volume (m^3)
+            mass = vol * st_density
+            return mass
 
         # Main loop
         while True:
@@ -236,7 +246,7 @@ class regenJacket:
             get_critical_dimensions(2, num_channels) # Barrel
             # print(critical_values)
             profile = get_all_dimensions()
-            (T_co, P_c, wall_temps, mass) = full_sim(num_channels)
+            (T_co, P_c, wall_temps, inner_mass) = full_sim(num_channels)
             # print(T_co, self.T_wg)
             # Increase wall gas temp if coolant outlet is too hot
             if T_co > self.T_co and self.T_wg < self.T_max:
@@ -249,8 +259,11 @@ class regenJacket:
                 break
             # print("Iteration complete")
         print("-<=Analysis Complete=>-\nCoolant Outlet Temp (K): " + str(T_co) + "\nRequired Coolant Inlet Pressure (bar): " + str(P_c))
-        # print(self.engine.engineProps)
-        print("Jacket Mass (kg): " + str(mass))
+        outer_mass = outer_jacket(self.engine)
+        mass = inner_mass + outer_mass
+        print("Inner Jacket Mass (kg): " + str(inner_mass))
+        print("Outer Jacket Mass (kg): " + str(outer_mass))
+        print("Total Mass (kg): " + str(mass))
 
         # USEFUL PLOTS:
         # Channel Width
