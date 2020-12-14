@@ -109,7 +109,6 @@ def getProps(chBarrel, nozzleContour, throatInd, ispObj, P_inj_psi, MR, A_t):
     #generate converging nozzle properties. This can probably be optimized later.
     for a in range(throatInd-1):
         aRat = ((nozzleContour[a, 0] ** 2) * math.pi)/ A_t
-        # print(aRat)
         output = ispObj.get_full_cea_output(P_inj_psi, MR, subar=aRat, short_output=1, output="siunits")
         # Grab properties
         for i in range(len(dataItems)):

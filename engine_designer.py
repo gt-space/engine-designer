@@ -24,7 +24,7 @@ LStar = 1.2
 # Run it!
 engine = Engine(thrust, C_p, conrat, LStar = LStar)
 engine.design_engine()
-# print(engine.engineProps[:,1])
+print(engine.engineProps)
 
 print(engine.A_t)
 print("C-star:", engine.C_star)
