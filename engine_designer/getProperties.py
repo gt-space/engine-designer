@@ -70,6 +70,7 @@ def getProps(chBarrel, nozzleContour, throatInd, ispObj, P_inj_psi, MR, A_t):
     numPTS = len(chBarrel)
     # full CEA output (used when other CEA methods are not available to gather specific data)
     output = ispObj.get_full_cea_output(P_inj_psi, MR, short_output=1, output="siunits")
+    print(output)
     # Define chamber props
     chamberProps = chBarrel
 
@@ -82,7 +83,7 @@ def getProps(chBarrel, nozzleContour, throatInd, ispObj, P_inj_psi, MR, A_t):
     no_inj = ["Ae/At", "CF", "Ivac, M/SEC", "Isp, M/SEC"]
 
     # Items that appear more than once
-    repeatedItems = ["CONDUCTIVITY  ", "PRANDTL NUMBER"]
+    repeatedItems = ["Cp, KJ/(KG)(K)", "CONDUCTIVITY  ", "PRANDTL NUMBER"]
 
     # Generate barrel properties
     for i in range(len(dataItems)):
@@ -94,9 +95,10 @@ def getProps(chBarrel, nozzleContour, throatInd, ispObj, P_inj_psi, MR, A_t):
             end = getValue(output, dataItems[i])
         else:
             inj = getValue(output, dataItems[i])
-            end = getValue(output, dataItems[i], 2) # rhoInd can be anything >1
+            end = getValue(output, dataItems[i], 2)
         chamberProps = np.column_stack((chamberProps, np.linspace(inj, end, numPTS)))
     for i in range(len(repeatedItems)):
+        # We want to ensure we're getting the frozen values
         inj = getValue(output, repeatedItems[i], 1, 2)
         end = getValue(output, repeatedItems[i], 2, 2)
         chamberProps = np.column_stack((chamberProps, np.linspace(inj, end, numPTS)))
@@ -106,7 +108,7 @@ def getProps(chBarrel, nozzleContour, throatInd, ispObj, P_inj_psi, MR, A_t):
 
     #generate converging nozzle properties. This can probably be optimized later.
     for a in range(throatInd-1):
-        aRat = ((nozzleContour[a, 0] ** 2) * math.pi )/ A_t
+        aRat = ((nozzleContour[a, 0] ** 2) * math.pi)/ A_t
         # print(aRat)
         output = ispObj.get_full_cea_output(P_inj_psi, MR, subar=aRat, short_output=1, output="siunits")
         # Grab properties
@@ -118,7 +120,7 @@ def getProps(chBarrel, nozzleContour, throatInd, ispObj, P_inj_psi, MR, A_t):
             nozzleProps[a, i+2] = prop
         for i in range(len(repeatedItems)):
             prop = getValue(output, repeatedItems[i], 4, 2)
-            nozzleProps[a, i + len(dataItems) + len(repeatedItems)] = prop
+            nozzleProps[a, i + 2 + len(dataItems)] = prop
 
     # generate diverging nozzle properties
     for a in range(throatInd-1,len(nozzleProps)):
@@ -133,7 +135,7 @@ def getProps(chBarrel, nozzleContour, throatInd, ispObj, P_inj_psi, MR, A_t):
             nozzleProps[a, i+2] = prop
         for i in range(len(repeatedItems)):
             prop = getValue(output, repeatedItems[i], 4, 2)
-            nozzleProps[a, i + len(dataItems) + len(repeatedItems)] = prop
+            nozzleProps[a, i + 2 + len(dataItems)] = prop
 
     engineProps = np.concatenate((chamberProps, nozzleProps))
     return engineProps

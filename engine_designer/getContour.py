@@ -15,8 +15,10 @@ def getContour(R_t, LStar, conRat, conAng, divAng, radRat, expRat):
 
     # ==== Size Chamber Parameters ====
     exitHalfAngle = divAng * math.pi / 180 #Nozzle Exit half angle, degrees to rad
+
     throatLeadInRadius = 1.5 * R_t #Throat lead in radius after contraction angle
     throatLeadOutRadius = 0.382 * R_t #Nozzle lead in radius
+
     R_tCurve = (throatLeadInRadius + throatLeadOutRadius)/2 #Throat radius of curvature (for Bartz)
     throatArea = math.pi * (R_t**2) #Area of the throat
     chamberArea = conRat * throatArea
@@ -40,6 +42,7 @@ def getContour(R_t, LStar, conRat, conAng, divAng, radRat, expRat):
     conLeadInRadius = radRat * conLdRadMax
     a1r = chamberRad - conLeadInRadius #Radial center point for lead out arc
     r0 = chamberRad
+
     # Chamber lead out start
     z1 = 0
     r1 = chamberRad
@@ -54,7 +57,7 @@ def getContour(R_t, LStar, conRat, conAng, divAng, radRat, expRat):
     # Throat
     z4 = z3 + throatLeadInRadius * math.sin(conAng)
     r4 = R_t
-    # Throat lead out start
+    # Throat lead out end
     z5 = z4 + (throatLeadOutRadius * math.sin(exitHalfAngle))
     r5 = throatLeadOutRadius - math.sqrt(throatLeadOutRadius**2-(throatLeadOutRadius * math.sin(exitHalfAngle))**2) + R_t
     # Nozzle Sizer

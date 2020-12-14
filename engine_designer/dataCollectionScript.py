@@ -1,5 +1,5 @@
 # ----==== GENERAL INFO ====----
-# Last Updated: 7/24/2020
+#
 # This script was adapted from an earlier MATLAB version. It is designed
 # to size an engine based on a few parameters and return a data array
 # describing various conditions at points along this created engine. It does
@@ -14,6 +14,7 @@
 #
 # NOTE: RocketCEA website documentation references combustion end pressure in its
 # funcitons, but it should say injector face pressure.
+# ==== Propellants: Kerosene and Liquid Oxygen ====
 
 import sys
 import math
@@ -22,8 +23,9 @@ import matplotlib.pyplot as plt
 from rocketcea.cea_obj import CEA_Obj
 from .getContour import getContour
 from .getProperties import getProps
+from .constants import Constants
 
-np.set_printoptions(threshold=sys.maxsize) #Print setting for debugging
+np.set_printoptions(threshold=sys.maxsize) # Print setting for debugging
 
 # MR: ox/fuel
 # thrust_nom: Design thrust (N)
@@ -32,7 +34,9 @@ np.set_printoptions(threshold=sys.maxsize) #Print setting for debugging
 # divAng: Divergence half angle (Deg)
 # Characteristic length (m)
 # radRat: R2/R2max - Refer to RPA User Manual : BETWEEN 0 & 1
+
 class Engine:
+    # Upon declaration of a new engine:
     def __init__(self, thrust_nom, P_inj, conRat, MR=2, divAng=15, conAng=35, radRat=0.7, LStar=1.05):
         self.thrust_nom = thrust_nom
         self.P_inj = P_inj
@@ -43,17 +47,14 @@ class Engine:
         self.radRat = radRat
         self.LStar = LStar
 
+    # Main design function
     def design_engine(self):
-        # ==== Propellants: Kerosene and Liquid Oxygen ====
-        # ==== Define Constants ====
-        self.g0 = 9.81 # Gravity (m/s^2)
-        self.bar = 100000 # 1 Bar in Pa
-        self.Ru = 8314.46 # Universal Gas Constant (J/kmolK)
+        # Call in global constants
+        constants = Constants()
 
         # ==== Specify Parameters ====
-        self.P_inj_psi = self.P_inj * 14.5038 # Psi is used in many CEA funcitons
-        self.P_amb = 1.01325 # Ambient Pressure (Bar)
-        self.P_rat = self.P_inj/self.P_amb # Inverse pressure ratio of overall expansion
+        self.P_inj_psi = self.P_inj * constants.psi_to_bar # Psi is used in many CEA funcitons
+        self.P_rat = self.P_inj/constants.P_amb # Inverse pressure ratio of overall expansion
 
         # Define RocketCEA object
         ispObj = CEA_Obj( oxName='LOX', fuelName='JetA', fac_CR=self.conRat)
@@ -68,10 +69,11 @@ class Engine:
 
         # ==== Get Throat Radius ====
 
-        self.M = ispObj.get_MachNumber(self.P_inj_psi, self.MR, self.expRat)
+        self.M = ispObj.get_MachNumber(self.P_inj_psi, self.MR, self.expRat) # Calculate mach number
 
-        sonic_v = ispObj.get_SonicVelocities(self.P_inj_psi, self.MR, self.expRat)
-        self.sonic_v = sonic_v[2]*0.3048
+        sonic_v = ispObj.get_SonicVelocities(self.P_inj_psi, self.MR, self.expRat) # Calculate sonic velocity
+
+        self.sonic_v = sonic_v[2]*constants.ft_to_m # Convert from ft/s to m/s
 
         self.nozCorrFactor = (1 + math.cos(self.divAng*math.pi/180))/2 # Correction factor for nozzle exit velocity, using conic appx
         self.V_exit = self.sonic_v * self.M # Sonic Vel * Mach @ Exit (m/s)
@@ -82,11 +84,11 @@ class Engine:
 
         self.T = ispObj.get_Temperatures(self.P_inj_psi, self.MR, self.expRat, frozen=0, frozenAtThroat=0) # Get temperature array
 
-        self.T_t = (self.T[1]-32)*5/9 + 273.15 # Throat temperature (F to K)
+        self.T_t = (self.T[1]-32)*5/9 + constants.C_to_K # Throat temperature (F to K)
 
         (self.MW, self.gam) = ispObj.get_Throat_MolWt_gamma(self.P_inj_psi, self.MR) # Get molecular weight and specific heat ratio
 
-        self.A_t = (self.mDot_tot/((self.P_inj / self.pip_t) * self.bar)) * math.sqrt((self.Ru * self.T_t)/(self.MW * self.gam)) # Area at throat (m^2)
+        self.A_t = (self.mDot_tot/((self.P_inj / self.pip_t) * constants.bar)) * math.sqrt((constants.Ru * self.T_t)/(self.MW * self.gam)) # Area at throat (m^2)
 
         self.R_t = math.sqrt(self.A_t / math.pi) # Calculate Throat Radius (m)
 
@@ -106,5 +108,5 @@ class Engine:
                 Try lowering thrust, increasing chamber pressure and/or decreasing contraction ratio.")
 
         # Performance parameters (not used in calculations)
-        self.C_f = ispObj.get_PambCf(14.69594878, self.P_inj_psi, self.MR, self.expRat)
-        self.C_star = ispObj.get_Cstar(self.P_inj_psi, self.MR) * 0.3048 * 0.975 # Calculate C*, m/s, apply 0.975 correction factor per H&H (pp. 70)
+        self.C_f = ispObj.get_PambCf(constants.psi_to_atm, self.P_inj_psi, self.MR, self.expRat)
+        self.C_star = ispObj.get_Cstar(self.P_inj_psi, self.MR) * constants.ft_to_m * 0.975 # Calculate C*, m/s, apply 0.975 correction factor per H&H (pp. 70)
