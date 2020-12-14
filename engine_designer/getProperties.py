@@ -1,7 +1,7 @@
 # ==== Calculate Properties ====
 # The array generated shall have the following header format:
 # R, Z, pip, aeat, mach, cf, ivac, isp, p, t, rho, h, u, mw, cp, gam, son,
-#   vis, cond, pran, condfz, pranfz
+#   vis, cond, pran, cpfz, condfz, pranfz
 # A description of each of these parameters can be found at:
 # https://cearun.grc.nasa.gov/cgi-bin/CEARUN/plotParameters.cgi
 
