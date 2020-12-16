@@ -30,9 +30,9 @@ Everything went fine except when trying to pip3 install genericf2py
 
 I was met with: Preparing wheel metadata ... error
 
-Good news is that this doesn’t matter. I don’t know what causes this, but the code will still run normally.
+To fix, try running with this option: pip3 install genericf2py==0.1.17 
 
-If you run into any other issues with installation let me know and we can work through them.
+If you run into any issues with Windows installation let me know and we can try working through it. If you end up figuring them out, please note your problem and solution here.
 
 # Design an Engine
 
