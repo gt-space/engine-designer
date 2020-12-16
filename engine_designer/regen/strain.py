@@ -18,11 +18,11 @@ def get_strain(R, t, meanT, dT, channel_w):
     # Props from http://www-ferp.ucsd.edu/LIB/PROPS/PANOS/cu.html
     alpha = (13.251 + 6.903e-3 * meanT + 8.53063e-7 * meanT) * 10**-6 # CTE Currenty taking mean value
     E = 129.8e9 # al 6061 E = 68.9e9 Pa, al 7075 E = 71.7e9 Pa
-    v = 0.34 # Possions ratio
+    v = 0.34 # Poisson's ratio for copper
 
-    strain_t1 = -alpha * (meanT - 298)
+    strain_t1 = -alpha * (meanT - 298) # Wall strain due to temperature increase from ambient
 
-    strain_t2 = -2 * alpha * dT/(1 - v)
+    strain_t2 = -2 * alpha * dT/(1 - v) # Strain on inner side of wall due to temp difference across wall
 
     strain_p = 3*(Po - Pi)*(channel_w)**2/4*(t)**2 # Derived from max beam bending. Should double check calcs.
 

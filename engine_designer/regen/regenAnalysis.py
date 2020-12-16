@@ -40,7 +40,7 @@ class regenJacket:
         self.min_channel_w = min_channel_w # Minimum manufacutrable channel width (m)
         self.T_wg = T_wg # Gas-side wall temperature initial estimate (K)
         self.T_co = T_co # Desired coolant outlet temperature (K)
-        self.T_max = 1100 # Max allowed temp for material (copper melts at 1358 K)
+        self.T_max = 900 # Max allowed temp for material (copper melts at 1358 K)
 
     def get_geometry(self):
 
@@ -271,9 +271,9 @@ class regenJacket:
         # plt.xlabel('Distance from Injector', fontsize=16)
         # plt.ylabel('Channel Width', fontsize=16)
         # Wall Temp
-        # plt.plot(self.engine.engineProps[:,1], wall_temps)
-        # plt.xlabel('Distance from Injector (m)', fontsize=16)
-        # plt.ylabel('Wall Temperature (K)', fontsize=16)
-        # plt.show()
+        plt.plot(self.engine.engineProps[:,1], wall_temps)
+        plt.xlabel('Distance from Injector (m)', fontsize=16)
+        plt.ylabel('Wall Temperature (K)', fontsize=16)
+        plt.show()
 
         return (profile, T_co, mass)
