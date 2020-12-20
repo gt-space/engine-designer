@@ -9,8 +9,10 @@ import numpy as np
 thrust = 17792.89 # thrust (N)
 C_p = 48.2633 # chamber pressure (bar)
 conrat = 6
+MR = 2.0 # Mixture ratio (lox to fuel)
 T_co_max = 462 # Max allowed coolant outlet temp (K)
 L_star_max = 1.27 # Max allowed L-star (m) (H&H pg. 72)
+
 
 def get_conrat(thrust, P_c, plot = False):
     # Solve for contraction ratio that first meets desired coolant outlet temp
@@ -22,7 +24,7 @@ def get_conrat(thrust, P_c, plot = False):
     for i in range(20):
         try:
             conrat = 2+i/2
-            engine = Engine(thrust, P_c, conrat) # Create engine object
+            engine = Engine(thrust, P_c, conrat, MR = MR) # Create engine object
             engine.design_engine() # Run engine design procedures
             jacket = regenJacket(engine, T_co=outlet) # Create jacket object
             (profile, T_co, mass) = jacket.get_geometry() # Generate channel geometry
@@ -53,8 +55,9 @@ def l_star():
     L_star= 1 # Lowest acceptable characteristic length (m)
     for i in range(12):
         L_star += i * 0.01 # Increment L-star
-        engine = Engine(thrust, C_p, conrat, LStar = L_star) # Create engine object
+        engine = Engine(thrust, C_p, conrat, LStar = L_star, MR = MR) # Create engine object
         engine.design_engine() # Run engine design procedures
+        print(engine.engineProps)
         jacket = regenJacket(engine) # Create jacket object
         (profile, T_co, mass) = jacket.get_geometry() # Generate channel geometry
         if (T_co > T_co_max) or L_star >= L_star_max:
@@ -63,10 +66,11 @@ def l_star():
 
 def regen(L_star):
     # conrat = get_conrat(thrust, C_p, True) # Run this to solve for conrat based on minimizing outlet temp (takes a while)
-    engine = Engine(thrust, C_p, conrat, LStar = L_star) # Create engine object
+    engine = Engine(thrust, C_p, conrat, LStar = L_star, MR = MR) # Create engine object
     engine.design_engine() # Run engine design procedures
     jacket = regenJacket(engine) # Create jacket object
     (profile, T_co, mass) = jacket.get_geometry() # Generate channel geometry
+    print(profile)
 
 if __name__ == "__main__":
     L_star = l_star()

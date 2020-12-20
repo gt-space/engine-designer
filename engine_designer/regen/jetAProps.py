@@ -25,14 +25,17 @@ def getProps(T_cb):
     rho_c = rhoSlope * (T_cb - 288.7) + 848 #kg/m^3
 
     # Specific Heat
-    # Temperature in Celcius
-    # Cp_40C = 2.04 kj/kgK, Cp_160C = 2.56 kj/kgK, Pg. 55
-    CpSlope = 0.004333333
-    C_pc = 1000 * (CpSlope * (Tc_cel - 40) + 2.04) #J/kgK
+    # Temperature in Kelvin
+    # Cp_250K = 1.73 J/gK, Cp_450K = 2.55 J/gK, Pg. 85
+    CpSlope = (2.55-1.73)/(450-250)
+    C_pc = 1000 * (CpSlope * (T_cb - 250) + 1.73) #J/gK => J/kgK
+
+    # Cp_250K = 1.73 kj/kgK, Cp_450K = 2.55 kj.kgK
+    CpSlope = 0.0041
 
     # Conductivity
     # Temperature in Celcius
-    # Cond_20C = 0.1150 W/mK, Cond_100C = 0.1010 W/mK, Pg. 57
+    # Cond_20C = 0.1150 W/mK, Cond_100C = 0.1010 W/mK, Pg. 82
     condSlope = -0.000175
     cond_c = condSlope * (Tc_cel - 20) + 1.1150 #W/mK
 

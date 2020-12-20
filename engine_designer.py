@@ -15,14 +15,14 @@ import numpy as np
 # [R, Z]
 # engineProps is a numpy array with the following column format:
 # [R, Z, pip, aeat, mach, cf, ivac, isp, p, t, rho, h, u, mw, cp, gam, son,
-# vis, cond, pran, condfz, pranfz]
+# vis, cond, pran, cpfz, condfz, pranfz]
 
 thrust = 17792.89 # thrust (N)
-C_p = 48.2633 # chamber pressure (bar)
+P_c = 48.2633 # chamber pressure (bar)
 conrat = 6
 LStar = 1.2
 # Run it!
-engine = Engine(thrust, C_p, conrat, LStar = LStar)
+engine = Engine(thrust, P_c, conrat, LStar = LStar)
 engine.design_engine()
 print(engine.engineProps)
 

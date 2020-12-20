@@ -10,15 +10,10 @@ def Bartz(engine, T_wg, i):
     P_c = engine.P_inj_psi # Injector face pressure in psi
     T_c0 = engine.engineProps[0,9] * 1.8 # Convert K to R
     gam0 = engine.engineProps[0,15] # Chamber stagnation gamma
-        # !!! LOOK INTO THIS. cp_ns probably needs a more general assignment
-        # Old cp_ns - new estimate used as 2.2 KJ/Kg*K - correlation to come later
-        # NOTE: Effective specific heat used (instead of Frozen)
-        # cp_ns = engineProps(1,15).*0.23884; %Convert from Joules to BTU/lb*F
-    cp_ns = 2.2 * 0.23884 # Convert from Kilo-Joules to BTU/lb*F
-        # Originally used effective prandtl number from CEA, switched to gamma
-        # correlation
-    # praneff_ns2 = engine.engineProps[0,21] # No conversion needed
-    praneff_ns = (4*gam0)/(9*gam0-5)
+    # Average of frozen and not frozen
+    cp_ns = (engine.engineProps[i,20] + engine.engineProps[i,14]) * 0.5 * 0.23884; #Convert from Joules to BTU/lb*F
+    praneff_ns = 0.5 * (engine.engineProps[i,22] + engine.engineProps[i,19]) # No conversion needed
+    # praneff_ns = (4*gam0)/(9*gam0-5) #Originally used effective prandtl number from CEA, switched to gamma correlation
     visc_ns = (engine.engineProps[0,17]/1000) * (0.0672/12) # Convert to Poise then to lb/in-s
 
     bartzData = [T_wg, T_c0, R_t, P_c, C_star, R_tCurve, praneff_ns, visc_ns, cp_ns, g]
@@ -40,9 +35,10 @@ def Bartz(engine, T_wg, i):
     mach = engine.engineProps[i, 5]
     contourR = engine.engineProps[i, 0] * 39.3701 #Convert to Inches
     T_aw = T_c0 * (1 + (praneff_ns**(1/3)) * ((gam - 1)/2) * (mach**2))/(1 + ((gam - 1)/2) * (mach**2))
+    
     #Sigma = sigA * sigB - Split into Terms for readability
     sigA = (0.5 * (T_wg/T_c0) * (1 + ((gam - 1)/2) * mach**2) + 0.5)**(-0.68)
-    sigB = (1 + ((gam - 1)/2) * (mach**2))**(-0.12);
+    sigB = (1 + ((gam - 1)/2) * (mach**2))**(-0.12)
     sigma = sigA*sigB
     # a_T = (aA*aB*aC*aD)*aE*sigma - Split into Terms
     aA = 0.026/((2 * R_t)**0.2)
@@ -58,4 +54,5 @@ def Bartz(engine, T_wg, i):
     q_conv = q_conv * 1634246.235 #BTU/in^2-s -> W/m^2
     T_aw = T_aw / 1.8 #R -> K
 
+    # print(h_g)
     return (h_g, q_conv, T_aw)

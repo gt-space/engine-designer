@@ -19,6 +19,8 @@ def getValue(output, str, i=1, n=1):
     ind = output.find(str) + len(str)
     # l is the length of the value we're finding
     l = 1
+    if str == "Cp, KJ/(KG)(K)":
+        n += 1
     # rho is formatted oddly in the output string, so it needs to be handled
     # differently. This can probably be made neater, but for now it works.
     if str == "RHO, KG/CU M":
