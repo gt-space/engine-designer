@@ -1,22 +1,14 @@
 # Scirpt to calculate the pressure lost at a station along the engine
 from .colebrook import colebrook
 
-
-def pressureDrop(CSA, d_hyd, mDot_chan, rho_c, len, viscK_c):
-    # pressureDrop - Calculate pressure drop in coolant passage
-
-    epsilon = 0.005 * (10 ** (-3)) #Surface roughness, guess based on our manufacuting capability, mm
-    K = epsilon / d_hyd
-    w_c = mDot_chan/(rho_c * CSA) #Coolant Velocity
-
-    Re_c = (w_c * d_hyd)/viscK_c #Reynolds number for coolant in passage (characteristic length chosen to be hydraulic diameter
+def pressureDrop(Re, D_hyd, vel, rho, length):
+    k = 0.005 * (10 ** (-3)) #Surface roughness, guess based on our manufacuting capability, mm => m
 
     # Solve for Darcy Friction Factor Approximation using Reynolds number
-    if Re_c <= 2320:
-        fric = 64 / Re_c #Laminar flow approximation
+    if Re <= 2320:
+        fric = 64 / Re # Laminar flow approximation
     else:
-        fric = colebrook(Re_c, K) #Colebrook-White Equation solution (via online function)
+        fric = colebrook(Re, D_hyd, k) # Colebrook-White Equation solution
 
-    dP = fric * (len/d_hyd) * rho_c * ((w_c**2)/2) #Solve for final dP across passage segment (Pa)
-
+    dP = fric * (length/D_hyd) * rho * ((vel**2)/2) #Solve for final dP across passage segment (Pa)
     return dP

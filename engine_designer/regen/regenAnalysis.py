@@ -104,20 +104,24 @@ class regenJacket:
                 h_c = 0.0214 * (Re_c)**0.8 * (Pr_c)**0.4 * (viscK_c/viscK_c_w)**0.14 * (cond_c/D_hyd)
 
                 length = 0.001 # Really doesn't impact anything but used in fin calcs. Could be set to anything
-                perim_conf = 2 * length + 2 * fin_w # Contact perimeter for fin efficiency calcs
-                A_conf = length * fin_w # Contact area for fin efficiency calcs
-                A_fin = 2 * self.channel_h * length # Area of single fin in analysis segment
-                A_finTot = num_channels * A_fin # Total fin area
-                A_totg = 2 * math.pi * R * length #total hot gas side wall area
+                    # Future versions should edit this out of calculation
+                # perim_conf = 2 * length + 2 * fin_w # Contact perimeter for fin efficiency calcs
+                # A_conf = length * fin_w # Contact area for fin efficiency calcs
 
                 #Run fin efficiency calculations to find the effective contact area
-                m = math.sqrt((h_c * perim_conf)/(cond_w * A_conf)) # Fin efficiency parameter
+                # m = math.sqrt((h_c * perim_conf)/(cond_w * A_conf)) # Old fin efficiency parameter
+                m = math.sqrt((2*h_c)/(cond_w*fin_w)) # Fin efficiency length independent
                 eta_fin = math.tanh(m * self.channel_h)/(m * self.channel_h) # Fin efficiency
-                A_totc = A_finTot + num_channels * channel_w * length # Total coolant side heat transfer area
-                eta_tot = 1 - (((num_channels * A_fin)/A_totc) * (1 - eta_fin)) # Overall coolant side heat transfer efficiency
-
-                q_in = qdot_ge * A_totg # Total heat entering wall from gasses (not the rate)
+                A_fin = 2 * self.channel_h * length # Area of single fin in analysis segment
+                A_finTot = num_channels * A_fin # Total fin area
+                A_wallTot = num_channels * channel_w * length  # Total wall contact area
+                A_totc = A_finTot + A_wallTot # Total coolant side heat transfer area
+                eta_tot = (A_wallTot + A_finTot * eta_fin)/A_totc  # Overall convection efficiency
                 q_out = h_c * A_totc * eta_tot * (T_wc - T_cb)
+
+                A_totg = 2 * math.pi * R * length #total hot gas side wall area
+                q_in = qdot_ge * A_totg # Total heat entering wall from gasses (not the rate)
+
                 # print(q_in, q_out, h_c, T_wg)
 
                 # If too much heat is entering
@@ -175,6 +179,7 @@ class regenJacket:
             P_c = self.engine.P_inj * 1.2 # Initial coolant pressure (bar) 1.2 included as stiffness
             wall_temps = np.zeros([numPTS,1]) # Wall temperature vector
             coolant_temps = np.zeros([numPTS,1]) # Coolant temperature vector
+            pressures = np.zeros([numPTS,1]) # Coolant pressure vector
             volume = 0 # To calculate mass of jacket (m^3) (may be used for future optimization)
             for x in range(numPTS):
                 i = numPTS - x - 1 # Reverse order
@@ -202,26 +207,23 @@ class regenJacket:
                     vel_c = mDot_chan/(A_cc * rho_c) # Coolant velocity in channel (m/s)
                     Re_c = (vel_c * D_hyd) / viscK_c # Coolant Reynolds number
                     Pr_c = viscK_c * rho_c * C_pc / cond_c # Coolant Prandtl Number
-                    (rho_c, C_pc, cond_q, viscK_c_w) = getProps(T_wc)
+                    viscK_c_w = getProps(T_wc)[3] # Get viscosity at wall
                     h_c = 0.021 * (Re_c)**0.8 * (Pr_c)**0.4 * (viscK_c/viscK_c_w)**0.14 * (cond_c/D_hyd) #Apply Nusselt
 
-                    perim_conf = 2 * length + 2 * fin_w # Contact perimeter for fin efficiency calcs
-                    A_conf = length * fin_w # Contact area for fin efficiency calcs
-                    A_fin = 2 * self.channel_h * length # Area of single fin in analysis segment
-                    A_finTot = num_channels * A_fin # Total fin area
-                    A_totc = A_finTot + num_channels * channel_w * length # Total coolant side heat transfer area
-                    A_totg = 2 * math.pi * R * length #total hot gas side wall area
-
                     #Run fin efficiency calculations to find the effective contact area
-                    # m = math.sqrt((h_c * perim_conf)/(cond_w * A_conf)) # Fin efficiency parameter (old)
+                    # m = math.sqrt((h_c * perim_conf)/(cond_w * A_conf)) # Old fin efficiency parameter
                     m = math.sqrt((2*h_c)/(cond_w*fin_w)) # Fin efficiency length independent
                     eta_fin = math.tanh(m * self.channel_h)/(m * self.channel_h) # Fin efficiency
-                    eta_tot = 1 - (((num_channels * A_fin)/A_totc) * (1 - eta_fin)) # Overall coolant side heat transfer efficiency
+                    A_fin = 2 * self.channel_h * length # Area of single fin in analysis segment
+                    A_finTot = num_channels * A_fin # Total fin area
+                    A_wallTot = num_channels * channel_w * length  # Total wall contact area
+                    A_totc = A_finTot + A_wallTot # Total coolant side heat transfer area
+                    eta_tot = (A_wallTot + A_finTot * eta_fin)/A_totc  # Overall convection efficiency
+                    q_out = h_c * A_totc * eta_tot * (T_wc - T_cb)
 
-                    q_out = h_c * (T_wc - T_cb) * A_totc * eta_tot # Total heat transfer = flux * effective area
-                    q_in = qdot_ge * A_totg
+                    A_totg = 2 * math.pi * R * length #total hot gas side wall area
+                    q_in = qdot_ge * A_totg # Total heat entering wall from gasses (not the rate)
 
-                    # print(T_wg, q_in, q_out)
                     # If too much heat is entering
                     if q_in > q_out:
                         T_wg = T_wg * (1+0.1*abs((q_in-q_out)/(q_in+q_out)))
@@ -234,11 +236,12 @@ class regenJacket:
                 wall_temps[i,0] = T_wg
                 coolant_temps[i,0] = T_cb
                 # strain = get_strain(R, self.wall_t, (T_wg+T_wc)/2, T_wg-T_wc, channel_w) # Should be pretty low
-                dP = pressureDrop(A_cc, D_hyd, mDot_chan, rho_c, length, viscK_c)
+                dP = pressureDrop(Re_c, D_hyd, vel_c, rho_c, length)
                 P_c += dP/100000
+                pressures[i,0] = P_c
                 volume += (2*math.pi*R * self.wall_t + fin_w * self.channel_h * num_channels) * length
             mass = volume * cu_density
-            return (T_cb, P_c, wall_temps, coolant_temps, mass)
+            return (T_cb, P_c, wall_temps, coolant_temps, pressures, mass)
 
         def outer_jacket(engine):
             # Estimate mass of steel shell surroudning engine
@@ -258,7 +261,7 @@ class regenJacket:
             get_critical_dimensions(2, num_channels) # Barrel
             # print(critical_values)
             profile = get_all_dimensions()
-            (T_co, P_c, wall_temps, coolant_temps, inner_mass) = full_sim(num_channels)
+            (T_co, P_c, wall_temps, coolant_temps, pressures, inner_mass) = full_sim(num_channels)
             # print(T_co, self.T_wg)
             # Increase wall gas temp if coolant outlet is too hot
             if T_co > self.T_co and self.T_wg < self.T_max:
@@ -285,7 +288,7 @@ class regenJacket:
         # Wall Temp
         plt.plot(self.engine.engineProps[:,1], wall_temps)
         plt.xlabel('Distance from Injector (m)', fontsize=16)
-        plt.ylabel('Coolant Temperature (K)', fontsize=16)
+        plt.ylabel('Wall Temp (K)', fontsize=16)
         plt.show()
 
-        return (profile, T_co, mass)
+        return (profile, T_co, mass, num_channels)

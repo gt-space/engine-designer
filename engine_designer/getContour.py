@@ -117,4 +117,4 @@ def getContour(R_t, LStar, conRat, conAng, divAng, radRat, expRat):
     # plt.plot(engineContour[:, 1], engineContour[:, 0])
     # plt.show()
 
-    return (engineContour, chBarrel, nozzleContour, R_tCurve, throatInd)
+    return (engineContour, chBarrel, nozzleContour, R_tCurve, throatInd, conLeadInRadius)

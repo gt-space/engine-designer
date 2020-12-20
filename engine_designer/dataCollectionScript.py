@@ -95,7 +95,7 @@ class Engine:
         self.conAng = self.conAng * math.pi / 180 # Nozzle contraction angle (degrees to rad)
 
         # Generate engine contour from external function:
-        (self.engineContour, self.chBarrel, self.nozzleContour, self.R_tCurve, self.throatInd) = getContour(self.R_t, self.LStar, self.conRat, self.conAng, self.divAng, self.radRat, self.expRat)
+        (self.engineContour, self.chBarrel, self.nozzleContour, self.R_tCurve, self.throatInd, self.conLeadInRadius) = getContour(self.R_t, self.LStar, self.conRat, self.conAng, self.divAng, self.radRat, self.expRat)
 
         # Generate engine property array from helper function
         # This creates a 200x22 array describing various properties along the nozzle.
