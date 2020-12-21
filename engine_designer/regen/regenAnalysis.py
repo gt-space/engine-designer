@@ -180,6 +180,7 @@ class regenJacket:
             wall_temps = np.zeros([numPTS,1]) # Wall temperature vector
             coolant_temps = np.zeros([numPTS,1]) # Coolant temperature vector
             pressures = np.zeros([numPTS,1]) # Coolant pressure vector
+            cycle_limits = np.zeros([numPTS,1]) # Cycle limit vector
             volume = 0 # To calculate mass of jacket (m^3) (may be used for future optimization)
             for x in range(numPTS):
                 i = numPTS - x - 1 # Reverse order
@@ -235,13 +236,15 @@ class regenJacket:
                 T_cb += dT_c
                 wall_temps[i,0] = T_wg
                 coolant_temps[i,0] = T_cb
-                # strain = get_strain(R, self.wall_t, (T_wg+T_wc)/2, T_wg-T_wc, channel_w) # Should be pretty low
+                chamber_pressure = self.engine.P_inj / self.engine.engineProps[i,2]
+                strain, cycle_limit = get_strain(R, self.wall_t, (T_wg+T_wc)/2, T_wg-T_wc, channel_w, P_c, chamber_pressure) # Should be pretty low
+                cycle_limits[i,0] = cycle_limit
                 dP = pressureDrop(Re_c, D_hyd, vel_c, rho_c, length)
                 P_c += dP/100000
                 pressures[i,0] = P_c
                 volume += (2*math.pi*R * self.wall_t + fin_w * self.channel_h * num_channels) * length
             mass = volume * cu_density
-            return (T_cb, P_c, wall_temps, coolant_temps, pressures, mass)
+            return (T_cb, P_c, wall_temps, coolant_temps, pressures, cycle_limits, mass)
 
         def outer_jacket(engine):
             # Estimate mass of steel shell surroudning engine
@@ -261,7 +264,7 @@ class regenJacket:
             get_critical_dimensions(2, num_channels) # Barrel
             # print(critical_values)
             profile = get_all_dimensions()
-            (T_co, P_c, wall_temps, coolant_temps, pressures, inner_mass) = full_sim(num_channels)
+            (T_co, P_c, wall_temps, coolant_temps, pressures, cycle_limits, inner_mass) = full_sim(num_channels)
             # print(T_co, self.T_wg)
             # Increase wall gas temp if coolant outlet is too hot
             if T_co > self.T_co and self.T_wg < self.T_max:
@@ -286,9 +289,9 @@ class regenJacket:
         # plt.xlabel('Distance from Injector', fontsize=16)
         # plt.ylabel('Channel Width', fontsize=16)
         # Wall Temp
-        plt.plot(self.engine.engineProps[:,1], wall_temps)
+        plt.plot(self.engine.engineProps[:,1], cycle_limits)
         plt.xlabel('Distance from Injector (m)', fontsize=16)
-        plt.ylabel('Wall Temp (K)', fontsize=16)
+        plt.ylabel('Cycle Life', fontsize=16)
         plt.show()
 
         return (profile, T_co, mass, num_channels)

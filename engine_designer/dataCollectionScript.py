@@ -98,7 +98,7 @@ class Engine:
         (self.engineContour, self.chBarrel, self.nozzleContour, self.R_tCurve, self.throatInd, self.conLeadInRadius) = getContour(self.R_t, self.LStar, self.conRat, self.conAng, self.divAng, self.radRat, self.expRat)
 
         # Generate engine property array from helper function
-        # This creates a 200x22 array describing various properties along the nozzle.
+        # This creates a 200x23 array describing various properties along the nozzle.
         # See getProperties.py for details
         self.engineProps = getProps(self.chBarrel, self.nozzleContour, self.throatInd, ispObj, self.P_inj_psi, self.MR, self.A_t)
 
