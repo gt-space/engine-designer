@@ -32,7 +32,7 @@ np.set_printoptions(threshold=sys.maxsize) # Print full arrays (for debugging)
 
 class regenJacket:
     # Initialize the jacket object upon declaration
-    def __init__(self, engine, channel_h=0.002, wall_t=0.001, min_fin_w = 0.001, min_channel_w = 0.0015875, T_wg=750, T_co=462):
+    def __init__(self, engine, channel_h=0.001, wall_t=0.001, min_fin_w = 0.001, min_channel_w = 0.0015875/2, T_wg=750, T_co=462):
         self.engine = engine # Engine object to be jacketed
         self.channel_h = channel_h # Channel height (m)
         self.wall_t = wall_t # Inner wall thickness (m)
@@ -237,8 +237,11 @@ class regenJacket:
                 wall_temps[i,0] = T_wg
                 coolant_temps[i,0] = T_cb
                 chamber_pressure = self.engine.P_inj / self.engine.engineProps[i,2]
-                strain, cycle_limit = get_strain(R, self.wall_t, (T_wg+T_wc)/2, T_wg-T_wc, channel_w, P_c, chamber_pressure) # Should be pretty low
-                cycle_limits[i,0] = cycle_limit
+                try:
+                    strain, cycle_limit = get_strain(R, self.wall_t, (T_wg+T_wc)/2, T_wg-T_wc, channel_w, P_c, chamber_pressure) # Should be pretty low
+                    cycle_limits[i,0] = cycle_limit
+                except:
+                    pass
                 dP = pressureDrop(Re_c, D_hyd, vel_c, rho_c, length)
                 P_c += dP/100000
                 pressures[i,0] = P_c
@@ -289,9 +292,9 @@ class regenJacket:
         # plt.xlabel('Distance from Injector', fontsize=16)
         # plt.ylabel('Channel Width', fontsize=16)
         # Wall Temp
-        plt.plot(self.engine.engineProps[:,1], cycle_limits)
+        plt.plot(self.engine.engineProps[:,1], coolant_temps)
         plt.xlabel('Distance from Injector (m)', fontsize=16)
-        plt.ylabel('Cycle Life', fontsize=16)
+        plt.ylabel('Coolant Temperature (K)', fontsize=16)
         plt.show()
 
         return (profile, T_co, mass, num_channels)

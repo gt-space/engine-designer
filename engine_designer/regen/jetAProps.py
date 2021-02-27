@@ -13,16 +13,16 @@ def getProps(T_cb):
     import math
 
     # https://tsapps.nist.gov/publication/get_pdf.cfm?pub_id=904848 See page 73
-    Tc_cel = T_cb - 273.15 #Coolant temperature in celcius.
 
     # Boiling point at 1 atm (conservative since BP increases with pressure)
     T_boil = 462.039 # (K)
 
     # Density
     # Temperature in Celcius
-    # rho_288.7K = 0.811 kg/L
-    rhoSlope = -0.753846 # From old data. Would be nice to update
-    rho_c = rhoSlope * (T_cb - 288.7) + 848 #kg/m^3
+    # rho_270K = 0.835 kg/L
+    # rho_470K = 0.685 kg/L
+    rhoSlope = (0.685-0.835)/(470-270) # From old data. Would be nice to update
+    rho_c = (rhoSlope * (T_cb - 270) + 0.835) * 1000 #kg/m^3
 
     # Specific Heat
     # Temperature in Kelvin
@@ -35,12 +35,12 @@ def getProps(T_cb):
 
     # Conductivity
     # Temperature in Celcius
-    # Cond_20C = 0.1150 W/mK, Cond_100C = 0.1010 W/mK, Pg. 82
-    condSlope = -0.000175
-    cond_c = condSlope * (Tc_cel - 20) + 1.1150 #W/mK
+    # Cond_300K = 0.1150 W/mK, Cond_550K = 0.076 W/mK, Pg. 82
+    condSlope = (0.076-0.1150)/(550-300)
+
+    cond_c = condSlope * (T_cb - 300) + 0.1150 #W/mK
 
     # Kinematic viscosity
-    viscK_c = (11.5 / 1000000) * math.exp(-(T_cb-238.706)/60) # Taken at -30 F system (mm^2/s => m^2/s)
-        # 60 comes from decay rate of this data: # https://tsapps.nist.gov/publication/get_pdf.cfm?pub_id=904848 (page 73)
+    viscK_c =  1.7825 * (1700 * math.exp(-0.026*(T_cb)) + 0.27) / 1000000 # Done with eyeballed curve fit. Should be updated to use a more rigorous method
 
     return (rho_c, C_pc, cond_c, viscK_c)
