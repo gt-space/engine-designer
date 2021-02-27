@@ -29,10 +29,10 @@ engine = Engine(thrust, P_c, conrat, LStar = LStar) # Create engine object given
 engine.design_engine() # Call the design function
 
 # Print some of the results
-print("Exit_vel: " + str(engine.V_exit))
-print("M_dot: " + str(engine.mDot_tot))
-print("Throat: " + str(engine.A_t))
-print("C-star: ", str(engine.C_star))
+print("Exit Velocity [m/s]: " + str(engine.V_exit))
+print("Total Mass Flow Rate [kg/s]: " + str(engine.mDot_tot))
+print("Throat Area [m^2]: " + str(engine.A_t))
+print("C-star [m/s]: ", str(engine.C_star))
 
 # See a specific value (change the 0 to the index of the property you want to see):
 plt.plot(engine.engineProps[:, 1], engine.engineProps[:,0])
