@@ -1,4 +1,5 @@
 # Encapsulate global constants as an object to be called
+
 class Constants:
     def __init__(self):
         # ==== Define Constants ====

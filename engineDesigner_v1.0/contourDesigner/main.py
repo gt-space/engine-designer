@@ -17,20 +17,22 @@ from engine_designer.dataCollectionScript import Engine
 import matplotlib.pyplot as plt
 import numpy as np
 
-thrust = 17792.89 # thrust (N)
-P_c = 18 #48.2633 # chamber pressure (bar)
-conrat = 6
-LStar = 1.2
+# Define input parameters
+thrust = 3000 * 4.44822 # Thrust [lbf to N]
+P_c = 500 * 0.0689476 # Chamber Pressure [psi to bar]
+conrat = 6 # Contraction Ratio
+LStar = 1.2 # Characteristic Length [m]
+MR = 1.8 # Mixture ratio by weight
 
 # Run it!
-engine = Engine(thrust, P_c, conrat, LStar = LStar)
-engine.design_engine()
+engine = Engine(thrust, P_c, conrat, LStar = LStar) # Create engine object given params
+engine.design_engine() # Call the design function
+
+# Print some of the results
 print("Exit_vel: " + str(engine.V_exit))
 print("M_dot: " + str(engine.mDot_tot))
 print("Throat: " + str(engine.A_t))
-
-# print(engine.A_t)
-print("C-star:", engine.C_star)
+print("C-star: ", str(engine.C_star))
 
 # See a specific value (change the 0 to the index of the property you want to see):
 plt.plot(engine.engineProps[:, 1], engine.engineProps[:,0])
@@ -39,6 +41,7 @@ plt.ylabel('Radius (m)', fontsize=16)
 # plt.ylim([0,0.1])
 plt.show()
 
+# Export contour data to csv
 def create_csv(engine):
     matrix = engine.engineProps[:, 0:2] # Radius and distance from injector matrix
     np.savetxt("contour.csv", matrix, delimiter=",")
