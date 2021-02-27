@@ -1,5 +1,5 @@
 # engine-designer
-Summary: Designs YJSP regen engine contour/regen circuit using NASA CEA, optimizes around thermal and structural requirements for peak thrust.
+Summary: This codebase designs an engine contour and regenerative cooling circuit using NASA CEA
 Point of Contact: Ben Woodman (benwoodman@gatech.edu)
 
 # Getting Python
@@ -30,7 +30,7 @@ Everything went fine except when trying to pip3 install genericf2py
 
 I was met with: Preparing wheel metadata ... error
 
-To fix, try running with this option: pip3 install genericf2py==0.1.17 
+To fix, try running with this option: pip3 install genericf2py==0.1.17
 
 If you run into any issues with Windows installation let me know and we can try working through it. If you end up figuring them out, please note your problem and solution here.
 
@@ -38,7 +38,7 @@ If you run into any issues with Windows installation let me know and we can try 
 
 Now just navigate to the directory where you’ve saved the code and run:
 
-$ python engine_designer.py 
+$ python engine_designer.py
 
 This will generate an engine geometry and combustion gas property array based on your chosen parameters. To edit those input parameters, you can change the input parameters in engine_designer.py in the text editor of your choice.
 
