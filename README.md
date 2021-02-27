@@ -1,6 +1,9 @@
 # engine-designer
-Summary: This codebase designs an engine contour and regenerative cooling circuit using NASA CEA
+Summary: This codebase designs an engine contour and regenerative cooling circuit using NASA's CEA solver.
+
 Point of Contact: Ben Woodman (benwoodman@gatech.edu)
+
+NOTE: The program is currently under revision. The latest version can be found under archive > engineDesigner_v0.3.
 
 # Getting Python
 
