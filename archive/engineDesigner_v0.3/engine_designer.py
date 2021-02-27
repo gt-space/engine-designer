@@ -1,4 +1,4 @@
-from engine_designer.dataCollectionScript import Engine
+from programFiles.dataCollectionScript import Engine
 import matplotlib.pyplot as plt
 import numpy as np
 
