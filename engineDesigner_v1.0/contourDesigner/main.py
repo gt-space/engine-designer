@@ -1,28 +1,13 @@
-# USAGE:
-# design_engine(thrust_nom, P_inj, conRat, MR, divAng)
-# thrust_nom: Design thrust (N)
-# P_inj: Injector face pressure (Bar)
-# conRat: Enigne contraciton ratio
-# MR: ox/fuel (default = 1.8)
-# divAng: Divergence half angle (Deg) (defualt = 15)
-
-# OUTPUTS:
-# engineContour is a numpy array with the following column format:
-# [R, Z]
-# engineProps is a numpy array with the following column format:
-# [R, Z, pip, aeat, mach, cf, ivac, isp, p, t, rho, h, u, mw, cp, gam, son,
-# vis, cond, pran, cpfz, condfz, pranfz]
-
 from engine_designer.dataCollectionScript import Engine
 import matplotlib.pyplot as plt
 import numpy as np
 
 # Define input parameters
 thrust = 3000 * 4.44822 # Thrust [lbf to N]
-P_c = 500 * 0.0689476 # Chamber Pressure [psi to bar]
-conrat = 6 # Contraction Ratio
-LStar = 1.2 # Characteristic Length [m]
-MR = 1.8 # Mixture ratio by weight
+P_c = 500 * 0.0689476 # Chamber pressure at injector face [psi to bar]
+conrat = 6 # Contraction ratio
+LStar = 1.2 # Characteristic length [m]
+MR = 1.8 # Mixture ratio by weight (ox/fuel)
 
 # Run it!
 engine = Engine(thrust, P_c, conrat, LStar = LStar) # Create engine object given params
