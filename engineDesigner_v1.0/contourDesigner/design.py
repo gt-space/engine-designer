@@ -13,8 +13,8 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 from rocketcea.cea_obj import CEA_Obj
-from getContour import getContour
-from getProperties import getProps
+from contour import getContour
+from CEA_properties import getProps
 from constants import Constants
 
 np.set_printoptions(threshold=sys.maxsize) # Print setting for debugging arrays
@@ -22,7 +22,7 @@ np.set_printoptions(threshold=sys.maxsize) # Print setting for debugging arrays
 class Engine:
     # Upon declaration of a new engine:
     def __init__(self, thrust, P_inj, conRat, MR=2, divAng=15, conAng=35, radRat=0.7, LStar=1.05):
-        self.thrust = thrust Design thrust (N) # thrust: Design thrust [N]
+        self.thrust = thrust # thrust: Design thrust [N]
         self.P_inj = P_inj # P_inj: Injector face pressure [Bar]
         self.conRat = conRat # conRat: Enigne contraciton ratio
         self.MR = MR # Mixture ratio by weight (ox/fuel)

@@ -1,10 +1,10 @@
-from engine_designer.dataCollectionScript import Engine
+from design import Engine
 import matplotlib.pyplot as plt
 import numpy as np
 
 # Define input parameters
 thrust = 3000 * 4.44822 # Thrust [lbf to N]
-P_c = 500 * 0.0689476 # Chamber pressure at injector face [psi to bar]
+P_c = 400 * 0.0689476 # Chamber pressure at injector face [psi to bar]
 conrat = 6 # Contraction ratio
 LStar = 1.2 # Characteristic length [m]
 MR = 1.8 # Mixture ratio by weight (ox/fuel)
@@ -15,7 +15,8 @@ engine.design_engine() # Call the design function
 
 # Print some of the results
 print("Exit Velocity [m/s]: " + str(engine.V_exit))
-print("Total Mass Flow Rate [kg/s]: " + str(engine.mDot_tot))
+print("Fuel Mass Flow Rate [kg/s]: " + str(engine.mDot_f))
+print("LOX Mass Flow Rate [kg/s]: " + str(engine.mDot_o))
 print("Throat Area [m^2]: " + str(engine.A_t))
 print("C-star [m/s]: ", str(engine.C_star))
 
