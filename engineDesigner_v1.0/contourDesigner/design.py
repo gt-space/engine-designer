@@ -1,4 +1,4 @@
-# design.py : Defines engine class and applies relevant equations to build
+# DESIGN.PY : Defines engine class and applies relevant equations to build
 # and simulate and engine geometry given input parameters
 
 # OUTPUTS:
