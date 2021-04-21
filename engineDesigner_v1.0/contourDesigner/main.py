@@ -1,14 +1,13 @@
 # MAIN.PY – Master file for running engine design scripts
 # Calls design.py and gathers results for printing and plotting
 
-## GATHER FILES AND LIBRARIES ##
 from design import Engine
 from alt_design import AltEngine
 import matplotlib.pyplot as plt
 import numpy as np
 
 ## DEFINE INPUT PARAMETERS ##
-thrust = 3000 * 4.44822 # Thrust [lbf to N]
+thrust = 4500 * 4.44822 # Thrust [lbf to N]
 P_c = 500 * 0.0689476 # Chamber pressure at injector face [psi to bar]
 con_rat = 6 # Contraction ratio
 L_star = 1.2 # Characteristic length [m]
@@ -26,6 +25,9 @@ else:
     engine = AltEngine(D_exit, P_c, con_rat, L_star = L_star, MR = MR) # Create engine object given params
     engine.design_engine() # Call the design function
 
+## COMPARE WITH ISENTROPIC RELATIONS ##
+
+engine.isentropic_comparison()
 
 ## DISPLAY RESULTS ##
 print("Exit Velocity [m/s]: " + str(engine.V_exit))
