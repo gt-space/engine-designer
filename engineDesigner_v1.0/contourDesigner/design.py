@@ -38,7 +38,7 @@ class Engine:
 
         # ==== Specify Parameters ====
         P_inj_psi = self.P_inj * constants.psi_to_bar # Psi is used in many CEA funcitons
-        self.P_rat = self.P_inj/constants.P_amb # Inverse pressure ratio of overall expansion
+        self.P_rat = 20*self.P_inj/constants.P_amb # Inverse pressure ratio of overall expansion
 
         # Define RocketCEA object
         ispObj = CEA_Obj( oxName='LOX', fuelName='JetA', fac_CR=self.conRat)
