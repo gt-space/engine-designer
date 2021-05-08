@@ -42,8 +42,8 @@ print("exit pressure [bar]: ", str(engine.engineProps[-1, 8]))
 # Plot a specific value (change the 0 to the index of the property you want to see):
 # Indecies can be found in design.py header
 plt.plot(engine.engineProps[:, 1], engine.engineProps[:, 0])
-plt.xlabel('Distance from Injector (m)', fontsize=16)
-plt.ylabel('Radius (m)', fontsize=16)
+plt.xlabel('Distance from Injector [m]', fontsize=16)
+plt.ylabel('Radius [m]', fontsize=16)
 # plt.ylim([0,0.1]) # Restrict plot range
 plt.show()
 
