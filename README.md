@@ -3,7 +3,7 @@ Summary: This codebase designs an engine contour and regenerative cooling circui
 
 Point of Contact: Ben Woodman (benwoodman@gatech.edu)
 
-NOTE: The program is currently under revision. The latest version can be found under archive > engineDesigner_v0.3.
+NOTE: The program is currently under revision. The latest working version can be found under archive > engineDesigner_v0.3.
 
 # Setup
 
