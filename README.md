@@ -5,12 +5,15 @@ Point of Contact: Ben Woodman (benwoodman@gatech.edu)
 
 NOTE: The program is currently under revision. The latest version can be found under archive > engineDesigner_v0.3.
 
-# Getting Python
+# Setup
+
+I have run this code on Mac and Linux.
+
+If you are on a Windows machine, running this program will be a difficult process. I strongly reccomend a Linux partition as the Windows installation steps for rocketCEA are terrible. If you do not have one, this video is a good start: https://youtu.be/aKKdiqVHNqw. Be aware that things may not work first try depending on how your laptop is configured, so Google will be your friend.
 
 You will need python 3 on your machine. I’ve tested with both 3.7 and 3.8 and they work fine.  
 
-
-I’ve been running this on Mac and this is what worked for me:
+FOR MAC:
 
 Homebrew + Python Installation Guide: https://docs.python-guide.org/starting/install3/osx/
 
@@ -18,8 +21,9 @@ Run this command in terminal to get 3.8 working (optional):
 
 $ export PATH="/usr/local/opt/python@3.8/bin:$PATH"
 
+FOR LINUX:
 
-For windows, I’d start here if you need Python installed: https://www.python.org/downloads/  
+Wokring on steps, will be done shortly
 
 # Download Packages
 
