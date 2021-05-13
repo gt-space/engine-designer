@@ -1,7 +1,7 @@
 # DESIGN.PY – Defines engine class and applies relevant equations to build
 # and simulate and engine geometry given input parameters
 
-# OUTPUTS
+# IMPORTANT RESULTS:
 # engineContour is a numpy array with the following column format:
 # [R, Z]
 # engineProps is a numpy array with the following column format:
@@ -93,13 +93,14 @@ class Engine:
     # Compare CEA results with first order estimates from isentropic flow relations
     # Done mainly out of curiousity, but also validates results in case of mistakes
     def isentropic_comparison(self):
-
+        print("*** ISENTROPIC COMPARISON TO CEA ***")
         # Throat Pressure Ratio
         gam = self.engineProps[0, 15] # Injector gamma
         pip_t_i = ((gam+1)/2)**(1/(gam-1))
         pip_t_cea = self.engineProps[99+self.throatInd, 2]
-        print(self.throatInd)
-        print(pip_t_i, pip_t_cea)
+        print("Isentropic Critical Pressure Ratio: " + str(pip_t_i))
+        print("CEA Critical Pressure Ratio: " + str(pip_t_cea))
+        print(" ~~~~~~~~~~~~~~~~~~~ ")
 
         # Exit Velocity
 

@@ -12,32 +12,31 @@ P_c = 500 * 0.0689476 # Chamber pressure at injector face [psi to bar]
 con_rat = 6 # Contraction ratio
 L_star = 1.2 # Characteristic length [m]
 MR = 1.8 # Mixture ratio by weight (ox/fuel)
+solve_bell = False # Solve with a bell nozle instead of a conical one
 
 # Params for alternative solution method (uses throat area instead of thrust)
 D_exit = 10 * 0.0254 # Based on guess on vehicle diameter [in to m]
-alt = False # Use alternative solution method where thrust is solved for
+alt = False # Bool to use alternative solution method where thrust is solved for
 
 ## CALL DESIGN SCRIPT ##
 if alt == False:
     engine = Engine(thrust, P_c, con_rat, L_star = L_star, MR = MR) # Create engine object given params
     engine.design_engine() # Call the design function
+    engine.isentropic_comparison() # Compare with isentropic flow relations (optional, prints to console)
 else:
     engine = AltEngine(D_exit, P_c, con_rat, L_star = L_star, MR = MR) # Create engine object given params
     engine.design_engine() # Call the design function
 
-## COMPARE WITH ISENTROPIC RELATIONS ##
-
-engine.isentropic_comparison()
 
 ## DISPLAY RESULTS ##
 print("Exit Velocity [m/s]: " + str(engine.V_exit))
-print("Mass Flow Rate [kg/s]: ", str(engine.mDot_tot))
+print("Mass Flow Rate [kg/s]: " + str(engine.mDot_tot))
 print("Fuel Mass Flow Rate [kg/s]: " + str(engine.mDot_f))
 print("LOX Mass Flow Rate [kg/s]: " + str(engine.mDot_o))
 print("Throat Area [m^2]: " + str(engine.A_t))
-print("C-star [m/s]: ", str(engine.C_star))
-print("Thrust [lbf]: ", str(engine.thrust * 0.224809))
-print("exit pressure [bar]: ", str(engine.engineProps[-1, 8]))
+print("C-star [m/s]: " + str(engine.C_star))
+print("Thrust [lbf]: " + str(engine.thrust * 0.224809))
+print("exit pressure [bar]: " + str(engine.engineProps[-1, 8]))
 
 # Plot a specific value (change the 0 to the index of the property you want to see):
 # Indecies can be found in design.py header
