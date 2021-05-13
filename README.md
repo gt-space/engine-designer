@@ -5,25 +5,28 @@ Point of Contact: Ben Woodman (benwoodman@gatech.edu)
 
 NOTE: The program is currently under revision. The latest working version can be found under archive > engineDesigner_v0.3.
 
-# Setup
+# Python Setup
 
-I have run this code on Mac and Linux.
+I have run this code successfully on Mac and Linux.
 
-If you are on a Windows machine, running this program will be a difficult process. I strongly reccomend a Linux partition as the Windows installation steps for rocketCEA are terrible. If you do not have one, this video is a good start: https://youtu.be/aKKdiqVHNqw. Be aware that things may not work first try depending on how your laptop is configured, so Google will be your friend.
+If you are on a Windows machine, running this program will be a difficult process. I strongly reccomend a Linux partition as the Windows installation steps for rocketCEA are terrible. If you do not have one, this video is a good start: https://youtu.be/aKKdiqVHNqw. Be aware that things may not work first try depending on how your laptop is configured, so you may need to Google some additional things.
 
 You will need python 3 on your machine. I’ve tested with both 3.7 and 3.8 and they work fine.  
 
 FOR MAC:
 
+The rocketCEA setup requires that you have Python setup with homebrew. The following guide can help you set this up.
+
 Homebrew + Python Installation Guide: https://docs.python-guide.org/starting/install3/osx/
 
 Run this command in terminal to get 3.8 working (optional):
-
 $ export PATH="/usr/local/opt/python@3.8/bin:$PATH"
 
 FOR LINUX:
 
-Wokring on steps, will be done shortly
+Your Linux installation should already come with Python 3 installed. 
+To check version: $ python3 --version
+I recommend 3.7 or newer, as earlier versions of Python have not been tested. If your machine is running an older version, these steps should help you update it: https://dev.to/serhatteker/how-to-upgrade-to-python-3-7-on-ubuntu-18-04-18-10-5hab
 
 # Download Packages
 
@@ -39,18 +42,24 @@ I was met with: Preparing wheel metadata ... error
 
 To fix, try running with this option: pip3 install genericf2py==0.1.17
 
-If you run into any issues with Windows installation let me know and we can try working through it. If you end up figuring them out, please note your problem and solution here.
+If you attempt a Windows installation and you end up figuring it out, please let me know and we can document useful information here.
 
 # Design an Engine
 
-Now just navigate to the directory where you’ve saved the code and run:
+You will now need to either clone or download the code. Cloning will give you git control, letting you update the code and pull updates when they are available, whereas downloading just gives you the latest files with no git control. Unless you know what you're doing and would like to set up a branch, I recommend just downloading the latest version and not worrying about accidentally pushing any changes.
 
-$ python engine_designer.py
+Click the green "Clone or Download" button and then the "Download ZIP" button.
 
-This will generate an engine geometry and combustion gas property array based on your chosen parameters. To edit those input parameters, you can change the input parameters in engine_designer.py in the text editor of your choice.
+Finally you can run the code! Navigate to the directory where you’ve saved the code, then move into 
+/engineDesigner_v1.0/contourDesigner
+
+Now run the main script:
+$ python3 main.py
+
+This will generate an engine geometry and combustion gas property array based on your chosen parameters. To edit those input parameters, you can change the input parameters in main.py in the text editor of your choice.
 
 # Run Regen Analysis
-This part of the script generates a channel profile for the regenerative cooling system. To run it:
+This part of the script generates a channel profile for the regenerative cooling system. Currently this code is being re-written, so the latest working version can be found in the archive folder. Go there and run:
 
 $ python regen.py
 
