@@ -8,7 +8,7 @@ import numpy as np
 
 ## GENERAL INPUT PARAMETERS ##
 # For basic engine configuration and adjustment
-thrust = 4500 * 4.44822 # Thrust [lbf to N]
+thrust = 4000 * 4.44822 # Thrust [lbf to N]
 P_c = 300 * 0.0689476 # Chamber pressure at injector face [psi to bar]
 P_e = 0.5 # Desired exit presure for expansion ratio [bar] (if in doubt put ambient)
 con_rat = 6 # Contraction ratio
@@ -41,13 +41,14 @@ else:
 
 
 ## DISPLAY RESULTS ##
+print(" +++ RESUTLS +++")
 print("Exit Velocity [m/s]: " + str(engine.V_exit))
 print("Mass Flow Rate [kg/s]: " + str(engine.mDot_tot))
 print("Fuel Mass Flow Rate [kg/s]: " + str(engine.mDot_f))
 print("LOX Mass Flow Rate [kg/s]: " + str(engine.mDot_o))
 print("Throat Area [m^2]: " + str(engine.A_t))
 print("C-star [m/s]: " + str(engine.C_star))
-print("Thrust [lbf]: " + str(engine.thrust * 0.224809))
+# print("Thrust [lbf]: " + str(engine.thrust * 0.224809)) # Only relevant if using alternative method
 print("exit pressure [bar]: " + str(engine.engineProps[-1, 8]))
 print("Exit angle [deg]: " + str(engine.theta_e))
 

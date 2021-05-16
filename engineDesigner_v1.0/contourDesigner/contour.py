@@ -104,7 +104,7 @@ def get_contour(R_t, con_rat, exp_rat, L_star, adv_data):
                     return a * (r**2) + b * r - (nozzleZ[i] - z5)
                 # Solve the root to get radius at that point
                 nozzleR[i] = r5 + root(f, 0.04).x[0]
-                theta_e = math.atan(1/(2*a*(r6-r5) + b)) * 180 / math.pi # Get the exit angle
+                theta_e = math.atan(1/(2*a*(r6-r5) + b)) * 180 / math.pi # Get the exit angle [deg]
             else:
                 nozzleR[i] = r5 + (nozzleZ[i] - z5) * math.tan(div_ang)
         else:
@@ -138,7 +138,7 @@ def get_contour(R_t, con_rat, exp_rat, L_star, adv_data):
     nozzleContour = np.delete(nozzleContour, 0, 0) #Drop first point so it isn't repeated
     engineContour = np.concatenate((chBarrel,nozzleContour), axis=0) #Combine into one index
 
-    # Plot the Contour if you want:
+    # Plot the Contour if you want (can also easily be done in main.py):
     # plt.plot(engineContour[:, 1], engineContour[:, 0])
     # plt.show()
 

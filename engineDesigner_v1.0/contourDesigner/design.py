@@ -94,7 +94,7 @@ class Engine:
         # Throat Pressure Ratio
         gam = self.engineProps[0, 15] # Injector gamma
         pip_t_i = ((gam+1)/2)**(1/(gam-1)) # Critical pressure ratio [P_c/P_t]
-        pip_t_cea = self.engineProps[99+self.throatInd, 2]
+        pip_t_cea = self.engineProps[100 + self.throatInd, 2]
         print("Isentropic Critical Pressure Ratio: " + str(pip_t_i))
         print("CEA Critical Pressure Ratio: " + str(pip_t_cea))
         print(" ~~~~~~~~~~~~~~~~~~~ ")
