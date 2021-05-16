@@ -15,7 +15,7 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 from rocketcea.cea_obj import CEA_Obj
-from contour import getContour
+from contour import get_contour
 from CEA_properties import getProps
 from constants import Constants
 

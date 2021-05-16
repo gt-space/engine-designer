@@ -6,21 +6,34 @@ from alt_design import AltEngine
 import matplotlib.pyplot as plt
 import numpy as np
 
-## DEFINE INPUT PARAMETERS ##
+## GENERAL INPUT PARAMETERS ##
+# For basic engine configuration and adjustment
 thrust = 4500 * 4.44822 # Thrust [lbf to N]
-P_c = 500 * 0.0689476 # Chamber pressure at injector face [psi to bar]
+P_c = 300 * 0.0689476 # Chamber pressure at injector face [psi to bar]
+P_e = 0.5 # Desired exit presure for expansion ratio [bar] (if in doubt put ambient)
 con_rat = 6 # Contraction ratio
-L_star = 1.2 # Characteristic length [m]
+L_star = 1.2 # Characteristic length [m] (for recommended values see H&H pg. 72)
 MR = 1.8 # Mixture ratio by weight (ox/fuel)
-solve_bell = False # Solve with a bell nozle instead of a conical one
+
+## ADVANCED INPUT PARAMETERS ##
+# For fine tuning the nozzle geometry. See Sutton pg. 80 for helpful graphic
+adv_data = {"solve_bell": True, # Solve with a bell nozle instead of a conical one
+            "div_ang": 15, # Conical divergence half angle [Deg]
+            "con_ang": 35, # Convergence half angle [Deg]
+            "rad_rat": 0.7, # rad_rat: R/Rmax (BETWEEN 0 & 1)
+            "lead_in_factor": 1.5, # Ratio of throat inlet radius of curvature to throat radius
+            "lead_out_factor": 0.4, # Ratio of throat outlet radius of curvature to throat radius (has minimal impact)
+            "theta_i": 30, # Angle leaving throat [deg] (Should be between 20 and 50)
+            "theta_e": 8, # Exit angle [deg] (Sutton recommends <= 10)
+            "percent_of_conical": 80} # Percent length compared to conical alternative (Should be ~80%)
 
 # Params for alternative solution method (uses throat area instead of thrust)
-D_exit = 10 * 0.0254 # Based on guess on vehicle diameter [in to m]
 alt = False # Bool to use alternative solution method where thrust is solved for
+D_exit = 10 * 0.0254 # Based on guess on vehicle diameter [in to m]
 
 ## CALL DESIGN SCRIPT ##
 if alt == False:
-    engine = Engine(thrust, P_c, con_rat, L_star = L_star, MR = MR) # Create engine object given params
+    engine = Engine(thrust, P_c, P_e, con_rat, L_star = L_star, MR = MR, adv_data = adv_data) # Create engine object given params
     engine.design_engine() # Call the design function
     engine.isentropic_comparison() # Compare with isentropic flow relations (optional, prints to console)
 else:
@@ -40,7 +53,7 @@ print("exit pressure [bar]: " + str(engine.engineProps[-1, 8]))
 
 # Plot a specific value (change the 0 to the index of the property you want to see):
 # Indecies can be found in design.py header
-plt.plot(engine.engineProps[:, 1], engine.engineProps[:, 2])
+plt.plot(engine.engineProps[:, 1], engine.engineProps[:, 8])
 plt.xlabel('Distance from Injector [m]', fontsize=16)
 plt.ylabel('Radius [m]', fontsize=16)
 # plt.ylim([0,0.1]) # Restrict plot range

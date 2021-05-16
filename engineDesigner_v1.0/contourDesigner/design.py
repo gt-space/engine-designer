@@ -1,5 +1,5 @@
 # DESIGN.PY – Defines engine class and applies relevant equations to build
-# and simulate and engine geometry given input parameters
+# and simulate an engine geometry given input parameters
 
 # IMPORTANT RESULTS:
 # engineContour is a numpy array with the following column format:
@@ -13,7 +13,7 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 from rocketcea.cea_obj import CEA_Obj
-from contour import getContour
+from contour import get_contour
 from CEA_properties import getProps
 from constants import Constants
 
@@ -22,14 +22,13 @@ np.set_printoptions(threshold=sys.maxsize) # Print setting for debugging arrays
 ## DEFINE ENGINE CLASS ##
 class Engine:
     # Upon declaration of a new engine:
-    def __init__(self, thrust, P_inj, con_rat, MR=2, div_ang=15, con_ang=35, rad_rat=0.7, L_star=1.05):
+    def __init__(self, thrust, P_inj, P_e, con_rat, adv_data, MR=2, L_star=1.05):
         self.thrust = thrust # thrust: Design thrust [N]
-        self.P_inj = P_inj # P_inj: Injector face pressure [Bar]
+        self.P_inj = P_inj # P_inj: Injector face pressure [bar]
+        self.P_e = P_e # P_e: Exit pressure [bar]
         self.con_rat = con_rat # con_rat: Enigne contraciton ratio
+        self.adv_data = adv_data # Geometric params for bell nozzle {dict}
         self.MR = MR # Mixture ratio by weight (ox/fuel)
-        self.div_ang = div_ang # Divergence half angle [Deg]
-        self.con_ang = con_ang # Convergence half angle [Deg]
-        self.rad_rat = rad_rat # rad_rat: R/Rmax (BETWEEN 0 & 1)
         self.L_star = L_star # Characteristic length [m]
 
     # Main design function
@@ -39,7 +38,7 @@ class Engine:
 
         # Specify Parameters
         P_inj_psi = self.P_inj * constants.psi_to_bar # Psi is used in many CEA funcitons
-        P_rat_tot = self.P_inj/constants.P_amb # Inverse pressure ratio of overall expansion
+        P_rat_tot = self.P_inj / self.P_e # Inverse pressure ratio of overall expansion
 
         # Define RocketCEA object
         ispObj = CEA_Obj( oxName='LOX', fuelName='JetA', fac_CR=self.con_rat)
@@ -53,11 +52,11 @@ class Engine:
         mach_e = ispObj.get_MachNumber(P_inj_psi, self.MR, exp_rat) # Calculate exit mach number
         v_son_vec = ispObj.get_SonicVelocities(P_inj_psi, self.MR, exp_rat) # Calculate sonic velocities
         v_son_e = v_son_vec[2] * constants.ft_to_m # Get exit sonic velocity value @ exit. Convert from ft/s to m/s
-        nozCorrFactor = (1 + math.cos(self.div_ang * math.pi/180))/2 # Correction factor for exit velocity, conical
+        noz_correction = (1 + math.cos(self.adv_data["div_ang"] * math.pi/180))/2 # Correction factor for exit velocity, conical
         self.V_exit = v_son_e * mach_e # Exit velocity [m/s]
 
         # Then find mass flow rate given design thrust. Ignore pressure difference compofrom exhaust and ambient
-        self.mDot_tot = self.thrust/(nozCorrFactor * self.V_exit) # Calculate total mass flow based on V_exit [kg/s]
+        self.mDot_tot = self.thrust/(noz_correction * self.V_exit) # Calculate total mass flow based on V_exit [kg/s]
         self.mDot_o = (self.mDot_tot/(self.MR + 1)) * self.MR # Oxidizer mass flow [kg/s]
         self.mDot_f = self.mDot_tot - self.mDot_o # Fuel mass flow [kg/s]
 
@@ -68,20 +67,18 @@ class Engine:
 
         # Find throat area given this equation: http://www.braeunig.us/space/propuls.htm [See 1.26]
         self.A_t = (self.mDot_tot/((self.P_inj / pip_t) * constants.bar)) * math.sqrt((constants.Ru * T_t)/(MW_t * gamma)) # Area at throat (m^2)
-        self.R_t = math.sqrt(self.A_t / math.pi) # Calculate Throat Radius (m)
-
-        self.con_ang = self.con_ang * math.pi / 180 # Nozzle contraction angle (degrees to rad)
+        R_t = math.sqrt(self.A_t / math.pi) # Calculate Throat Radius [m]
 
         # Generate engine contour from external function:
-        (self.engineContour, self.chBarrel, self.nozzleContour, self.R_tCurve, self.throatInd, self.conLeadInRadius) = getContour(self.R_t, self.L_star, self.con_rat, self.con_ang, self.div_ang, self.rad_rat, exp_rat)
+        (self.engineContour, chBarrel, nozzleContour, self.R_tCurve, self.throatInd, self.conLeadInRadius) = get_contour(R_t, self.con_rat, exp_rat, self.L_star, self.adv_data)
 
         # Generate engine property array from helper function
         # This creates a 200x23 array describing various properties along the nozzle.
         # See getProperties.py for details
-        self.engineProps = getProps(self.chBarrel, self.nozzleContour, self.throatInd, ispObj, P_inj_psi, self.MR, self.A_t)
+        self.engineProps = getProps(chBarrel, nozzleContour, self.throatInd, ispObj, P_inj_psi, self.MR, self.A_t)
 
         # Check for bad design (This occurs when thrust is way higher than chamber pressure should be and barrel becomes negative)
-        if self.chBarrel[1,1] < 0:
+        if chBarrel[1,1] < 0:
             raise Exception("Thrust is too high for given chamber pressure to create a geometry with this method. \
                 Try lowering thrust, increasing chamber pressure and/or decreasing contraction ratio.")
 
@@ -96,7 +93,7 @@ class Engine:
         print("*** ISENTROPIC COMPARISON TO CEA ***")
         # Throat Pressure Ratio
         gam = self.engineProps[0, 15] # Injector gamma
-        pip_t_i = ((gam+1)/2)**(1/(gam-1))
+        pip_t_i = ((gam+1)/2)**(1/(gam-1)) # Critical pressure ratio [P_c/P_t]
         pip_t_cea = self.engineProps[99+self.throatInd, 2]
         print("Isentropic Critical Pressure Ratio: " + str(pip_t_i))
         print("CEA Critical Pressure Ratio: " + str(pip_t_cea))
