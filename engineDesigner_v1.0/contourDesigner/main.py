@@ -22,9 +22,8 @@ adv_data = {"solve_bell": True, # Solve with a bell nozle instead of a conical o
             "con_ang": 35, # Convergence half angle [Deg]
             "rad_rat": 0.7, # rad_rat: R/Rmax (BETWEEN 0 & 1)
             "lead_in_factor": 1.5, # Ratio of throat inlet radius of curvature to throat radius
-            "lead_out_factor": 0.4, # Ratio of throat outlet radius of curvature to throat radius (has minimal impact)
-            "theta_i": 30, # Angle leaving throat [deg] (Should be between 20 and 50)
-            "theta_e": 8, # Exit angle [deg] (Sutton recommends <= 10)
+            "lead_out_factor": 0.7, # Ratio of throat outlet radius of curvature to throat radius (has minimal impact)
+            "theta_i": 35, # Angle leaving throat [deg] (Should be between 20 and 50)
             "percent_of_conical": 80} # Percent length compared to conical alternative (Should be ~80%)
 
 # Params for alternative solution method (uses throat area instead of thrust)
@@ -50,10 +49,11 @@ print("Throat Area [m^2]: " + str(engine.A_t))
 print("C-star [m/s]: " + str(engine.C_star))
 print("Thrust [lbf]: " + str(engine.thrust * 0.224809))
 print("exit pressure [bar]: " + str(engine.engineProps[-1, 8]))
+print("Exit angle [deg]: " + str(engine.theta_e))
 
 # Plot a specific value (change the 0 to the index of the property you want to see):
 # Indecies can be found in design.py header
-plt.plot(engine.engineProps[:, 1], engine.engineProps[:, 8])
+plt.plot(engine.engineProps[:, 1], engine.engineProps[:, 0])
 plt.xlabel('Distance from Injector [m]', fontsize=16)
 plt.ylabel('Radius [m]', fontsize=16)
 # plt.ylim([0,0.1]) # Restrict plot range

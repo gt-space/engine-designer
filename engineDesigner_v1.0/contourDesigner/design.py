@@ -70,7 +70,7 @@ class Engine:
         R_t = math.sqrt(self.A_t / math.pi) # Calculate Throat Radius [m]
 
         # Generate engine contour from external function:
-        (self.engineContour, chBarrel, nozzleContour, self.R_tCurve, self.throatInd, self.conLeadInRadius) = get_contour(R_t, self.con_rat, exp_rat, self.L_star, self.adv_data)
+        (self.engineContour, chBarrel, nozzleContour, self.R_tCurve, self.throatInd, self.conLeadInRadius, self.theta_e) = get_contour(R_t, self.con_rat, exp_rat, self.L_star, self.adv_data)
 
         # Generate engine property array from helper function
         # This creates a 200x23 array describing various properties along the nozzle.

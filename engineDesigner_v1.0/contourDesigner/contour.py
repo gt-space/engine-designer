@@ -25,7 +25,8 @@ def get_contour(R_t, con_rat, exp_rat, L_star, adv_data):
 
     solve_bell = adv_data["solve_bell"] # Bool for solving bell vs conical diverging section
     theta_i = adv_data["theta_i"] * math.pi / 180 # Angle leaving throat [deg to rad] (Should be between 20 and 50)
-    theta_e = adv_data["theta_e"] * math.pi / 180 # Exit angle [deg to rad] (Sutton recommends <= 10)
+    theta_e = div_ang # Default value, will not be updated if conical
+
     percent_of_conical = adv_data["percent_of_conical"] # Percent length compared to conical alternative (Should be ~80%)
 
     R_tCurve = (throatLeadInRadius + throatLeadOutRadius)/2 # Throat radius of curvature (for Bartz)
@@ -97,12 +98,13 @@ def get_contour(R_t, con_rat, exp_rat, L_star, adv_data):
         elif z5 <= nozzleZ[i] and nozzleZ[i] <= z6:
             if solve_bell:
                 # Function defining parabola:
+                a = ((z6-z5) - ((1/math.tan(theta_i))*(r6-r5)))/((r6-r5)**2)
+                b = 1/math.tan(theta_i)
                 def f(r):
-                    a = (1/math.tan(theta_e) - 1/math.tan(theta_i))/(2*(r6-r5))
-                    b = 1/math.tan(theta_i)
                     return a * (r**2) + b * r - (nozzleZ[i] - z5)
                 # Solve the root to get radius at that point
                 nozzleR[i] = r5 + root(f, 0.04).x[0]
+                theta_e = math.atan(1/(2*a*(r6-r5) + b)) * 180 / math.pi # Get the exit angle
             else:
                 nozzleR[i] = r5 + (nozzleZ[i] - z5) * math.tan(div_ang)
         else:
@@ -140,4 +142,4 @@ def get_contour(R_t, con_rat, exp_rat, L_star, adv_data):
     # plt.plot(engineContour[:, 1], engineContour[:, 0])
     # plt.show()
 
-    return (engineContour, chBarrel, nozzleContour, R_tCurve, throatInd, conLeadInRadius)
+    return (engineContour, chBarrel, nozzleContour, R_tCurve, throatInd, conLeadInRadius, theta_e)
