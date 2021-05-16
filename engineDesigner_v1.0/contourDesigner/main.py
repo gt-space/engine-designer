@@ -27,7 +27,7 @@ adv_data = {"solve_bell": True, # Solve with a bell nozle instead of a conical o
             "percent_of_conical": 80} # Percent length compared to conical alternative (Should be ~80%)
 
 # Params for alternative solution method (uses throat area instead of thrust)
-alt = False # Bool to use alternative solution method where thrust is solved for
+alt = False # Bool to use alternative solution method where thrust is solved for (this is broken RN, will fix if desired)
 D_exit = 10 * 0.0254 # Based on guess on vehicle diameter [in to m]
 
 ## CALL DESIGN SCRIPT ##
