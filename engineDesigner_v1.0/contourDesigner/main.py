@@ -41,7 +41,7 @@ print("LOX Mass Flow Rate [kg/s]: " + str(engine.mDot_o))
 print("Throat Area [m^2]: " + str(engine.A_t))
 print("C-star [m/s]: " + str(engine.C_star))
 # print("Thrust [lbf]: " + str(engine.thrust * 0.224809)) # Only relevant if using alternative method
-print("exit pressure [bar]: " + str(engine.engineProps[-1, 8]))
+print("Exit Pressure [bar]: " + str(engine.engineProps[-1, 8]))
 print("Exit angle [deg]: " + str(engine.theta_e))
 
 # Plot a specific value (change the 0 to the index of the property you want to see):
