@@ -66,7 +66,7 @@ def getValue(output, str, i=1, n=1):
         l += 1
     return float(output[ind:ind+l])
 
-def getProps(chBarrel, nozzleContour, throatInd, ispObj, P_inj_psi, MR, A_t):
+def get_props(chBarrel, nozzleContour, throatInd, ispObj, P_inj_psi, MR, A_t):
     # Find the Chamber Barrel Properties. Idealized as linear from inj to comb end
     # Chamber barrel length
     numPTS = len(chBarrel)

@@ -16,7 +16,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from rocketcea.cea_obj import CEA_Obj
 from contour import get_contour
-from CEA_properties import getProps
+from CEA_properties import get_props
 from constants import Constants
 
 np.set_printoptions(threshold=sys.maxsize) # Print setting for debugging arrays

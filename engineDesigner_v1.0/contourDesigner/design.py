@@ -13,9 +13,9 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 from rocketcea.cea_obj import CEA_Obj
-from contour import get_contour
-from CEA_properties import getProps
-from constants import Constants
+from contourDesigner.contour import get_contour
+from contourDesigner.CEA_properties import get_props
+from contourDesigner.constants import Constants
 
 np.set_printoptions(threshold=sys.maxsize) # Print setting for debugging arrays
 
@@ -75,7 +75,7 @@ class Engine:
         # Generate engine property array from helper function
         # This creates a 200x23 array describing various properties along the nozzle.
         # See getProperties.py for details
-        self.engineProps = getProps(chBarrel, nozzleContour, self.throatInd, ispObj, P_inj_psi, self.MR, self.A_t)
+        self.engineProps = get_props(chBarrel, nozzleContour, self.throatInd, ispObj, P_inj_psi, self.MR, self.A_t)
 
         # Check for bad design (This occurs when thrust is way higher than chamber pressure should be and barrel becomes negative)
         if chBarrel[1,1] < 0:
