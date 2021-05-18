@@ -1,7 +1,9 @@
 # alt_design.py : Defines engine class and applies relevant equations to build
 # and simulate and engine geometry given input parameters
 
-# Uses a fixed exit area and then
+# Uses a fixed exit area and then back solves for thrust
+# NOTE: This code has not been updated to work with newest version of main.py
+# Currently tabled until needed
 
 # OUTPUTS:
 # engineContour is a numpy array with the following column format:

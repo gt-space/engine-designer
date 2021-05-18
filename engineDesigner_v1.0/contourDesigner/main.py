@@ -2,7 +2,6 @@
 # Calls design.py and gathers results for printing and plotting
 
 from design import Engine
-from alt_design import AltEngine
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -26,21 +25,14 @@ adv_data = {"solve_bell": True, # Solve with a bell nozle instead of a conical o
             "theta_i": 35, # Angle leaving throat [deg] (Should be between 20 and 50)
             "percent_of_conical": 80} # Percent length compared to conical alternative (Should be ~80%)
 
-# Params for alternative solution method (uses throat area instead of thrust)
-alt = False # Bool to use alternative solution method where thrust is solved for (this is broken RN, will fix if desired)
-D_exit = 10 * 0.0254 # Based on guess on vehicle diameter [in to m]
-
 ## CALL DESIGN SCRIPT ##
-if alt == False:
-    engine = Engine(thrust, P_c, P_e, con_rat, L_star = L_star, MR = MR, adv_data = adv_data) # Create engine object given params
-    engine.design_engine() # Call the design function
-    engine.isentropic_comparison() # Compare with isentropic flow relations (optional, prints to console)
-else:
-    engine = AltEngine(D_exit, P_c, con_rat, L_star = L_star, MR = MR) # Create engine object given params
-    engine.design_engine() # Call the design function
+engine = Engine(thrust, P_c, P_e, con_rat, L_star = L_star, MR = MR, adv_data = adv_data) # Create engine object given params
+engine.design_engine() # Call the design function
+engine.isentropic_comparison() # Compare with isentropic flow relations (optional, prints to console)
 
 
 ## DISPLAY RESULTS ##
+
 print(" +++ RESUTLS +++")
 print("Exit Velocity [m/s]: " + str(engine.V_exit))
 print("Mass Flow Rate [kg/s]: " + str(engine.mDot_tot))
