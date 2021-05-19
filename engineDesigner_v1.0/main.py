@@ -2,7 +2,7 @@
 # Effectively the same as main.py in contourDesigner, but with regen functionality
 
 from contourDesigner.design import Engine
-from regenDesigner.regen import regenJacket
+from regenDesigner.regen import RegenJacket
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -26,18 +26,20 @@ adv_data = {"solve_bell": True, # Solve with a bell nozle instead of a conical o
             "theta_i": 35, # Angle leaving throat [deg] (Should be between 20 and 50)
             "percent_of_conical": 80} # Percent length compared to conical alternative (Should be ~80%)
 
-# Params for alternative solution method (uses throat area instead of thrust)
-alt = False # Bool to use alternative solution method where thrust is solved for (this is broken RN, will fix if desired)
-D_exit = 10 * 0.0254 # Based on guess on vehicle diameter [in to m]
+## REGEN PARAMETERS ##
+channel_height = 0.002 # Height of channel (depth of endmill cut) [m]
+wall_thickness = 0.002 # Thicness of liner (distance from inner wall to channel bottom) [m]
+min_fin_width = 0.001 # Fin width at the throat [m]
+channel_width = 0.002 # Width of channel [m]
+starting_index = 42 # Index to begin analysis for non-full regen designs. Where the fuel enters
+
 
 ## CALL DESIGN SCRIPT ##
-
 engine = Engine(thrust, P_c, P_e, con_rat, L_star = L_star, MR = MR, adv_data = adv_data) # Create engine object
-engine.design_engine() # Run engine design procedures
-# jacket = RegenJacket(engine) # Create jacket object
-# (profile, T_co, mass, num_channels) = jacket.get_geometry() # Generate channel geometry
-# print(profile)
-# get_modeling_data(engine, profile, num_channels)
+engine.design_engine() # Run engine design process (source code in contourDesigner)
+jacket = RegenJacket(engine, channel_height, wall_thickness, min_fin_width, channel_width, start_ind = starting_index) # Create jacket object
+(wall_temps, coolant_temps, pressures, num_channels) = jacket.simulate_regen() # Run regen simulation
+# Gets wall temperatures, coolant temperatures, pressures, and channel number
 
 
 # ## DISPLAY RESULTS ##
@@ -54,8 +56,8 @@ engine.design_engine() # Run engine design procedures
 #
 # # Plot a specific value (change the 0 to the index of the property you want to see):
 # # Indecies can be found in design.py header
-# plt.plot(engine.engineProps[:, 1], engine.engineProps[:, 0])
-# plt.xlabel('Distance from Injector [m]', fontsize=16)
-# plt.ylabel('Radius [m]', fontsize=16)
-# # plt.ylim([0,0.1]) # Restrict plot range
-# plt.show()
+plt.plot(engine.engineProps[:, 1], engine.engineProps[:, 0])
+plt.xlabel('Distance from Injector [m]', fontsize=16)
+plt.ylabel('Radius [m]', fontsize=16)
+# plt.ylim([0,0.1]) # Restrict plot range
+plt.show()

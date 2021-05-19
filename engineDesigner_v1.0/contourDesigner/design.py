@@ -37,20 +37,20 @@ class Engine:
         constants = Constants()
 
         # Specify Parameters
-        P_inj_psi = self.P_inj * constants.psi_to_bar # Psi is used in many CEA funcitons
+        self.P_inj_psi = self.P_inj * constants.psi_to_bar # Psi is used in many CEA funcitons
         P_rat_tot = self.P_inj / self.P_e # Inverse pressure ratio of overall expansion
 
         # Define RocketCEA object
         ispObj = CEA_Obj( oxName='LOX', fuelName='JetA', fac_CR=self.con_rat)
 
         # Get Expansion Ratio
-        pip_t = ispObj.get_Throat_PcOvPe(P_inj_psi, self.MR) # Throat pressure ratio (inj pressure / throat pressure)
-        exp_rat = ispObj.get_eps_at_PcOvPe(P_inj_psi, self.MR, P_rat_tot) # Get area ratio for desired expansion P_rat
+        pip_t = ispObj.get_Throat_PcOvPe(self.P_inj_psi, self.MR) # Throat pressure ratio (inj pressure / throat pressure)
+        exp_rat = ispObj.get_eps_at_PcOvPe(self.P_inj_psi, self.MR, P_rat_tot) # Get area ratio for desired expansion P_rat
 
         # Get Throat Radius
         # First need exit velocity
-        mach_e = ispObj.get_MachNumber(P_inj_psi, self.MR, exp_rat) # Calculate exit mach number
-        v_son_vec = ispObj.get_SonicVelocities(P_inj_psi, self.MR, exp_rat) # Calculate sonic velocities
+        mach_e = ispObj.get_MachNumber(self.P_inj_psi, self.MR, exp_rat) # Calculate exit mach number
+        v_son_vec = ispObj.get_SonicVelocities(self.P_inj_psi, self.MR, exp_rat) # Calculate sonic velocities
         v_son_e = v_son_vec[2] * constants.ft_to_m # Get exit sonic velocity value @ exit. Convert from ft/s to m/s
         noz_correction = (1 + math.cos(self.adv_data["div_ang"] * math.pi/180))/2 # Correction factor for exit velocity, conical
         self.V_exit = v_son_e * mach_e # Exit velocity [m/s]
@@ -61,21 +61,21 @@ class Engine:
         self.mDot_f = self.mDot_tot - self.mDot_o # Fuel mass flow [kg/s]
 
         # Get more params needed for throat sizing
-        temps = ispObj.get_Temperatures(P_inj_psi, self.MR, exp_rat, frozen=0, frozenAtThroat=0) # Get temperature array
+        temps = ispObj.get_Temperatures(self.P_inj_psi, self.MR, exp_rat, frozen=0, frozenAtThroat=0) # Get temperature array
         T_t = (temps[1] - 32) * 5/9 + constants.C_to_K # Throat temperature [F to K]
-        (MW_t, gamma) = ispObj.get_Throat_MolWt_gamma(P_inj_psi, self.MR) # Get molecular weight and specific heat ratio
+        (MW_t, gamma) = ispObj.get_Throat_MolWt_gamma(self.P_inj_psi, self.MR) # Get molecular weight and specific heat ratio
 
         # Find throat area given this equation: http://www.braeunig.us/space/propuls.htm [See 1.26]
         self.A_t = (self.mDot_tot/((self.P_inj / pip_t) * constants.bar)) * math.sqrt((constants.Ru * T_t)/(MW_t * gamma)) # Area at throat (m^2)
-        R_t = math.sqrt(self.A_t / math.pi) # Calculate Throat Radius [m]
+        self.R_t = math.sqrt(self.A_t / math.pi) # Calculate Throat Radius [m]
 
         # Generate engine contour from external function:
-        (self.engineContour, chBarrel, nozzleContour, self.R_tCurve, self.throatInd, self.conLeadInRadius, self.theta_e) = get_contour(R_t, self.con_rat, exp_rat, self.L_star, self.adv_data)
+        (self.engineContour, chBarrel, nozzleContour, self.R_tCurve, self.throatInd, self.conLeadInRadius, self.theta_e) = get_contour(self.R_t, self.con_rat, exp_rat, self.L_star, self.adv_data)
 
         # Generate engine property array from helper function
         # This creates a 200x23 array describing various properties along the nozzle.
         # See getProperties.py for details
-        self.engineProps = get_props(chBarrel, nozzleContour, self.throatInd, ispObj, P_inj_psi, self.MR, self.A_t)
+        self.engineProps = get_props(chBarrel, nozzleContour, self.throatInd, ispObj, self.P_inj_psi, self.MR, self.A_t)
 
         # Check for bad design (This occurs when thrust is way higher than chamber pressure should be and barrel becomes negative)
         if chBarrel[1,1] < 0:
@@ -83,8 +83,8 @@ class Engine:
                 Try lowering thrust, increasing chamber pressure and/or decreasing contraction ratio.")
 
         # Performance parameters (not used in calculations)
-        self.C_f = ispObj.get_PambCf(constants.psi_to_atm, P_inj_psi, self.MR, exp_rat)
-        self.C_star = ispObj.get_Cstar(P_inj_psi, self.MR) * constants.ft_to_m * 0.975 # Calculate C*, m/s, apply 0.975 correction factor per H&H (pp. 70)
+        self.C_f = ispObj.get_PambCf(constants.psi_to_atm, self.P_inj_psi, self.MR, exp_rat)
+        self.C_star = ispObj.get_Cstar(self.P_inj_psi, self.MR) * constants.ft_to_m * 0.975 # Calculate C*, m/s, apply 0.975 correction factor per H&H (pp. 70)
 
 
     # Compare CEA results with first order estimates from isentropic flow relations
