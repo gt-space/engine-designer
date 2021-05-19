@@ -59,7 +59,7 @@ $ python3 main.py
 This will generate an engine geometry and combustion gas property array based on your chosen parameters. To edit those input parameters, you can change the input parameters in main.py in the text editor of your choice.
 
 # Run Analysis with Regen
-This part of the script generates a channel profile for the regenerative cooling system. Go to the main engine-designer directory and run:
+This part of the script generates a channel profile for the regenerative cooling system. Go to the engineDesigner_v1.0 directory and run:
 
 $ python3 main.py
 
