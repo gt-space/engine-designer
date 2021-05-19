@@ -65,4 +65,6 @@ $ python3 main.py
 
 This returns general engine design outputs as well as regenerative cooling ciruit results. To fine tune the parameters of the regen circuit like channel dimenisions, change these values in main.py. If everything is working properly you should see two consecutive plots show up when you run the code, one of the enigne contour and another of the copper wall temperatures.
 
+Be aware that the current setup solves for the regen circuit assuming an abltative diverging section (to prevent excess coolant temperature increase).
+
 I've done my best to comment these scripts, but some things might not be too clear. For further explanation feel free to message me.
