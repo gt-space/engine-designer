@@ -10,7 +10,7 @@ np.set_printoptions(threshold=sys.maxsize) # Print full arrays (for debugging)
 
 class RegenJacket:
     # Initialize the jacket object upon declaration
-    def __init__(self, engine, channel_h=0.002, wall_t=0.002, min_fin_w = 0.001, channel_w = 0.002, T_ci=300, start_ind = 0):
+    def __init__(self, engine, channel_h=0.002, wall_t=0.002, min_fin_w = 0.001, channel_w = 0.002, T_ci=350, start_ind = 0):
         self.engine = engine # Engine object to be jacketed
         self.channel_h = channel_h # Channel height [m]
         self.wall_t = wall_t # Inner wall thickness [m]
@@ -90,9 +90,8 @@ class RegenJacket:
                 # h_c_2 = 0.021 * (Re_c**0.8) * (Pr_c**0.4) * (0.64+0.36*(T_cb/T_wc)) * (cond_c/D_hyd)
                 h_c = 0.023 * (Re_c**0.8) * (Pr_c**0.4) * (cond_c/D_hyd) # Dittus Boelter reccomended for small dT Convection
 
-                # Friction correlation (set up later)
+                # Friction correlation
                 f = self.get_friction(Re_c, D_hyd)
-                # f = (0.79 * np.log(Re_c) - 1.64) ** (-2)
                 Nu = (f/8)*(Re_c - 1000)*Pr_c/(1 + 12.7*((f/8)**0.5)*(Pr_c**(2/3)-1))
                 h_c = Nu * cond_c / D_hyd * (1000000*viscK_c/(0.2))**0.11
 

@@ -19,7 +19,7 @@ def bartz(engine, T_wg, i):
     visc_ns = (engine.engineProps[0,17]/1000) * 0.1 # Dyn viscosity (mili-Poise > Poise > kg/ms)
     cond = 0.1 * (engine.engineProps[i,21] + engine.engineProps[i,18]) * 0.5 # Eq Conductivity (W/mK)
     cp_ns_calc = (engine.engineProps[99,20] + engine.engineProps[99,14]) * 1000 #(kJ > J)
-    praneff_ns = visc_ns*cp_ns_calc/cond
+    # praneff_ns = visc_ns*cp_ns_calc/cond
     # praneff_ns = 0.508
     praneff_ns_est = (4*gam0)/(9*gam0-5) #Originally used effective prandtl number from CEA, switched to gamma correlation
 

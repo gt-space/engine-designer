@@ -11,15 +11,15 @@ import numpy as np
 thrust = 4000 * 4.44822 # Thrust [lbf to N]
 P_c = 250 * 0.0689476 # Chamber pressure at injector face [psi to bar]
 P_e = 0.5 # Desired exit presure for expansion ratio [bar] (if in doubt put ambient)
-con_rat = 5 # Contraction ratio
-L_star = 1.2 # Characteristic length [m] (for recommended values see H&H pg. 72)
+con_rat = 6 # Contraction ratio
+L_star = 1.1 # Characteristic length [m] (for recommended values see H&H pg. 72)
 MR = 1.8 # Mixture ratio by weight (ox/fuel)
 
 ## ADVANCED INPUT PARAMETERS ##
 # For fine tuning the nozzle geometry. See Sutton pg. 80 for helpful graphic
 adv_data = {"solve_bell": True, # Solve with a bell nozle instead of a conical one
             "div_ang": 15, # Conical divergence half angle [Deg]
-            "con_ang": 35, # Convergence half angle [Deg]
+            "con_ang": 45, # Convergence half angle [Deg]
             "rad_rat": 0.7, # rad_rat: R/Rmax (BETWEEN 0 & 1)
             "lead_in_factor": 1.5, # Ratio of throat inlet radius of curvature to throat radius
             "lead_out_factor": 0.7, # Ratio of throat outlet radius of curvature to throat radius (has minimal impact)
@@ -27,11 +27,11 @@ adv_data = {"solve_bell": True, # Solve with a bell nozle instead of a conical o
             "percent_of_conical": 80} # Percent length compared to conical alternative (Should be ~80%)
 
 ## REGEN PARAMETERS ##
-channel_height = 0.002 # Height of channel (depth of endmill cut) [m]
-wall_thickness = 0.002 # Thicness of liner (distance from inner wall to channel bottom) [m]
+channel_height = 0.0015 # Height of channel (depth of endmill cut) [m]
+wall_thickness = 0.003 # Thicness of liner (distance from inner wall to channel bottom) [m]
 min_fin_width = 0.001 # Fin width at the throat [m]
 channel_width = 0.002 # Width of channel [m]
-starting_index = 45 # Index to begin analysis for non-full regen designs. Where the fuel enters
+starting_index = 0 # Index to begin analysis for non-full regen designs. Where the fuel enters
 
 
 ## CALL ENGINE DESIGN SCRIPTS ##
@@ -46,8 +46,6 @@ print("Fuel Mass Flow Rate [kg/s]: " + str(engine.mDot_f))
 print("LOX Mass Flow Rate [kg/s]: " + str(engine.mDot_o))
 print("Throat Area [m^2]: " + str(engine.A_t))
 print("C-star [m/s]: " + str(engine.C_star))
-# print("Thrust [lbf]: " + str(engine.thrust * 0.224809)) # Only relevant if using alternative method
-print("exit pressure [bar]: " + str(engine.engineProps[-1, 8]))
 print("Exit angle [deg]: " + str(engine.theta_e))
 print(" ")
 
@@ -61,6 +59,7 @@ plt.show()
 print("Running Regen Analysis...")
 
 ## CALL REGEN SCRIPTS ##
+starting_index = engine.throat_end_ind # Set end of throat as start point (graphite nozzle case)
 jacket = RegenJacket(engine, channel_height, wall_thickness, min_fin_width, channel_width, start_ind = starting_index) # Create jacket object
 (wall_temps, coolant_temps, pressures, num_channels) = jacket.simulate_regen() # Run regen simulation
 # Gets wall temperatures, coolant temperatures, pressures, and channel number

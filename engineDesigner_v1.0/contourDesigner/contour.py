@@ -85,6 +85,7 @@ def get_contour(R_t, con_rat, exp_rat, L_star, adv_data):
     numPTS = 100 # Number of points defining each barrel and nozzle
     nozzleZ = np.linspace(0, nozzleLength, num=numPTS)
     nozzleR = np.zeros(numPTS)
+    throat_end_ind = 0 # Initialize value
     for i in range(len(nozzleZ)):
         if z1 <= nozzleZ[i] and nozzleZ[i] < z2:
             #Chamber Lead Out Rad
@@ -96,6 +97,8 @@ def get_contour(R_t, con_rat, exp_rat, L_star, adv_data):
         elif z4 <= nozzleZ[i] and nozzleZ[i] < z5:
             nozzleR[i] = R_t + throatLeadOutRadius - math.sqrt(throatLeadOutRadius**2 - (nozzleZ[i] - z4)**2)
         elif z5 <= nozzleZ[i] and nozzleZ[i] <= z6:
+            if throat_end_ind == 0:
+                throat_end_ind = i # Note point where throat ends for regen analysis
             if solve_bell:
                 # Function defining parabola:
                 a = ((z6-z5) - ((1/math.tan(theta_i))*(r6-r5)))/((r6-r5)**2)
@@ -142,4 +145,4 @@ def get_contour(R_t, con_rat, exp_rat, L_star, adv_data):
     # plt.plot(engineContour[:, 1], engineContour[:, 0])
     # plt.show()
 
-    return (engineContour, chBarrel, nozzleContour, R_tCurve, throatInd, conLeadInRadius, theta_e)
+    return (engineContour, chBarrel, nozzleContour, R_tCurve, throatInd, conLeadInRadius, theta_e, throat_end_ind)
