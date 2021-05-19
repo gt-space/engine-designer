@@ -56,7 +56,6 @@ class RegenJacket:
         pressures = np.zeros([numPTS-1-self.start_ind,1]) # Coolant pressure vector
 
         num_channels = round(2 * math.pi * (self.engine.R_t + self.wall_t) / (self.min_fin_w + self.channel_w))
-        print(num_channels)
 
         # Main loop
         for x in range(numPTS-1-self.start_ind):
@@ -126,10 +125,5 @@ class RegenJacket:
             wall_temps[i-1,0] = T_wg
             coolant_temps[i-1,0] = T_cb
             pressures[i-1,0] = P_co
-
-        plt.plot(self.engine.engineProps[:-(self.start_ind+1):,1], wall_temps)
-        plt.xlabel('Distance from Injector (m)', fontsize=16)
-        plt.ylabel('Coolant Temperature (K)', fontsize=16)
-        plt.show()
 
         return (wall_temps, coolant_temps, pressures, num_channels)
