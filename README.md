@@ -3,7 +3,7 @@ Summary: This codebase designs an engine contour and regenerative cooling circui
 
 Point of Contact: Ben Woodman (benwoodman@gatech.edu)
 
-NOTE: The program is currently under revision. The latest working version can be found under archive > engineDesigner_v0.3.
+NOTE: Version 1.0 is finally up to date and working!
 
 # Python Setup
 
@@ -44,7 +44,7 @@ To fix, try running with this option: pip3 install genericf2py==0.1.17
 
 If you attempt a Windows installation and you end up figuring it out, please let me know and we can document useful information here.
 
-# Design an Engine
+# Design an Engine (no Regen)
 
 You will now need to either clone or download the code. Cloning will give you git control, letting you update the code and pull updates when they are available, whereas downloading just gives you the latest files with no git control. Unless you know what you're doing and would like to set up a branch, I recommend just downloading the latest version and not worrying about accidentally pushing any changes.
 
@@ -58,28 +58,11 @@ $ python3 main.py
 
 This will generate an engine geometry and combustion gas property array based on your chosen parameters. To edit those input parameters, you can change the input parameters in main.py in the text editor of your choice.
 
-# Run Regen Analysis
-This part of the script generates a channel profile for the regenerative cooling system. Currently this code is being re-written, so the latest working version can be found in the archive folder. Go there and run:
+# Run Analysis with Regen
+This part of the script generates a channel profile for the regenerative cooling system. Go to the main engine-designer directory and run:
 
-$ python regen.py
+$ python3 main.py
 
-This returns an array defining the channel contour (the fin and channel widths at many points along the engine), and prints out the coolant outlet temperature and required inlet pressure.
-
-How it works:
-1. The user selects an initial gas side wall temp, min fin width, and desired coolant outlet temp. To edit these values, pass them in as parameters to the jacket object. You can see their ordering in the regenAnalysis.py init method.
-2. get_coolant_temps() finds an estimate for coolant bulk temperature at throat, exit, and injector plane.
-   a. Assumes a linear increase in temp (based on prior runs this is reasonable)
-3. get_critical_dimensions() takes these coolant bulk temperatures and uses them to converge on the channel width for steady state 1D heat transfer through the wall (at each of those three stations).
-   a. This width is contstrained by minimium fin and channel widths specified in the jacket object's initialization
-   b. If the channel width can't get any smaller, the wall temp must increase to compensate.
-4. get_all_dimensions() stitches together the geometry to generate a full contour
-5. full_sim() simulates this full contour and determines the outlet temp and inlet pressure
-   a. Solve for coolant convection coefficient
-   b. Pick gas side wall temp and converge on equilibrium
-   c. Solve for temperature increase
-   d. Solve for pressure loss
-6. The main loop checks if coolant outlet temp is too high, and if so it increases the gas side wall temp and repeats steps 2-5 until cooolant outlet temp is low enough or wall temps approach the limit defined in init.
-
-The strain at the inner wall is also calculated, but it's not used as a metric for optimizing the design since it is well within acceptable values for our expected range of operating cycles.
+This returns general engine design outputs as well as regenerative cooling ciruit results. To fine tune the parameters of the regen circuit like channel dimenisions, change these values in main.py. If everything is working properly you should see two consecutive plots show up when you run the code, one of the enigne contour and another of the copper wall temperatures.
 
 I've done my best to comment these scripts, but some things might not be too clear. For further explanation feel free to message me.
