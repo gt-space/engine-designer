@@ -9,9 +9,9 @@ import numpy as np
 ## GENERAL INPUT PARAMETERS ##
 # For basic engine configuration and adjustment
 thrust = 4000 * 4.44822 # Thrust [lbf to N]
-P_c = 300 * 0.0689476 # Chamber pressure at injector face [psi to bar]
+P_c = 250 * 0.0689476 # Chamber pressure at injector face [psi to bar]
 P_e = 0.5 # Desired exit presure for expansion ratio [bar] (if in doubt put ambient)
-con_rat = 6 # Contraction ratio
+con_rat = 5 # Contraction ratio
 L_star = 1.2 # Characteristic length [m] (for recommended values see H&H pg. 72)
 MR = 1.8 # Mixture ratio by weight (ox/fuel)
 

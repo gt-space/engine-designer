@@ -10,7 +10,7 @@ np.set_printoptions(threshold=sys.maxsize) # Print full arrays (for debugging)
 
 class RegenJacket:
     # Initialize the jacket object upon declaration
-    def __init__(self, engine, channel_h=0.002, wall_t=0.002, min_fin_w = 0.001, channel_w = 0.002, T_ci=300, start_ind = 40):
+    def __init__(self, engine, channel_h=0.002, wall_t=0.002, min_fin_w = 0.001, channel_w = 0.002, T_ci=300, start_ind = 0):
         self.engine = engine # Engine object to be jacketed
         self.channel_h = channel_h # Channel height [m]
         self.wall_t = wall_t # Inner wall thickness [m]
@@ -68,6 +68,8 @@ class RegenJacket:
             R = self.engine.engineProps[i,0]
             fin_w = ((2 * math.pi * (R + self.wall_t)) - (num_channels * self.channel_w)) / num_channels
             length = self.engine.engineProps[i,1] - self.engine.engineProps[i-1,1] # Station Length [m]
+            length = math.sqrt(length**2 + (R - self.engine.engineProps[i-1,0])**2) # Account for angle at station
+
             mDot_chan = mDot/num_channels
 
             while abs((q_in-q_out)/q_in) > 0.001:
