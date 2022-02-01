@@ -1,7 +1,7 @@
 # engine-designer
 Summary: This codebase designs an engine contour and regenerative cooling circuit using NASA's CEA solver.
 
-Point of Contact: Ben Woodman (benwoodman@gatech.edu)
+Point of Contact: Ben Woodman (benwoodman@gatech.edu), James Jutras (jjutras3@gatech.edu)
 
 NOTE: Version 1.0 is finally up to date and working!
 
