@@ -3,7 +3,7 @@ Summary: This codebase designs an engine contour and regenerative cooling circui
 
 Point of Contact: Ben Woodman (benwoodman@gatech.edu), James Jutras (jjutras3@gatech.edu)
 
-NOTE: Version 1.0 is finally up to date and working!
+NOTE: Version 1.0 (and now 2.0!) is finally up to date and working!
 
 # Python Setup
 
@@ -58,7 +58,7 @@ $ python3 main.py
 
 This will generate an engine geometry and combustion gas property array based on your chosen parameters. To edit those input parameters, you can change the input parameters in main.py in the text editor of your choice.
 
-# Run Analysis with Regen
+# Run Analysis with Regen, v1.0
 This part of the script generates a channel profile for the regenerative cooling system. Go to the engineDesigner_v1.0 directory and run:
 
 $ python3 main.py
@@ -67,4 +67,11 @@ This returns general engine design outputs as well as regenerative cooling cirui
 
 Be aware that the current setup solves for the regen circuit assuming an abltative diverging section (to prevent excess coolant temperature increase).
 
-I've done my best to comment these scripts, but some things might not be too clear. For further explanation feel free to message me.
+I've done my best to comment these scripts, but some things might not be too clear. For further explanation feel free to message me (Ben Woodman).
+
+# Optimize Design with Regen, v2.0
+Version 2 restructures the regen design process. Instead of inputting channel geometry and solving for wall temperatures, the code inputs a maximum wall temperature and solves for the channel geometry required to satisfty that thermal load.
+
+It can be run in the same way as v1.0, and all relevant parameters can be input into main.py 
+
+For more detailed documentation, see the Nuclino: Subscale -> Flight Teams -> Propulsion -> Engines -> Kraken
