@@ -5,15 +5,72 @@ Point of Contact: Ben Woodman (benwoodman@gatech.edu), James Jutras (jjutras3@ga
 
 NOTE: Version 1.0 (and now 2.0!) is finally up to date and working!
 
-# Python Setup
+**UPDATE**: Modifications has been made in the documentation to enable code's functionality in Windows platform
 
-I have run this code successfully on Mac and Linux.
+# Setup
 
-If you are on a Windows machine, running this program will be a difficult process. I strongly reccomend a Linux partition as the Windows installation steps for rocketCEA are terrible. If you do not have one, this video is a good start: https://youtu.be/aKKdiqVHNqw. Be aware that things may not work first try depending on how your laptop is configured, so you may need to Google some additional things.
+## FOR WINDOWS: 
 
-You will need python 3 on your machine. I’ve tested with both 3.7 and 3.8 and they work fine.  
+If you ask programmers about their preferred OS, most would say Linux. But meh! Which operation system has the coolest looking GUI? Windows! Which OS has the most installable softwares? Windows! All hail Windows.
 
-FOR MAC:
+OKAY, so in a nutshell, modifications are now done to support the installations in Windows, thanks to Windows Subsystem for Linux (WSL) 2.0. The Windows Subsystem for Linux lets developers run a GNU/Linux environment -- including most command-line tools, utilities, and applications -- directly on Windows, unmodified, without the overhead of a traditional virtual machine or dualboot setup.
+
+Here are the procedures to setup your Windows machine to run codes from this repo:
+
+### First objective is to install WSL 2.0 in Windows "as administrator"
+- To install WSL2 on Windows 10, open Command Prompt as admin and run `wsl –install` (or)  `wsl -install -d Ubuntu`
+- However, if you have a specific distro (a Linux OS) in mind, use the command `wls -install -d <DISTRO_NAME>`, where <DISTRO_NAME> is to be replaced with the OS of your choice. (https://winaero.com/list-available-wsl-linux-distros-windows-10/)
+
+### Next objective 
+### Installing Python 3 in WSL
+
+- Before installation of Python package, make sure that the build is up-to-date. Run the command 
+`sudo apt -get update`
+AND
+`sudo apt -get upgrade`
+
+- Now, install the Python packages using the command
+`sudo apt install python3 python3-pip ipython3`
+
+- To check it the installation was successful, you may run a quick command
+`python3 --version`
+The code should spit out `Python 3.10.8` as the output
+
+Viewing Python scripts in the Linux interface is horrendous, trust me. Although a few advocate for using "vim" in Linux interface for easy operatibility, I prefer GUI (ofcourse! I use windows and not stone age OS!). So, for better GUI experience, neat indentations, easy debugging yata yata yata..., I would prefer installing Atom text editor, which is the "Hackable text editor for the 21st century"....or atleast that's how they market it.
+
+### Installing Atom
+
+Download Atom from the official website in Windows.
+
+Add Atom to the windows environment variables.
+- Run the following: win+r and type in SystemPropertiesAdvanced.exe
+- Open: Environment Variables
+- Add your Atom path:
+`C:\Users\<user-name>\AppData\Local\atom\bin`
+
+Go into the WSL and add an alias for Atom in your bashrc file:
+- Open your bash configuration: `vim ~/.bashrc`
+- Add to the end of the file and save/exit:
+`alias atom="/mnt/c/Windows/System32/cmd.exe /c 'atom'"`
+- Update your bash profile: `source ~/.bashrc`
+Now you can use `atom . &` to open your python projects from WSL command line.
+
+### Installing Jupyter Notebook [Optional - but advisable]
+
+Install jupyter: `pip3 install jupyter`
+
+Create alias to launch jupyter without browser from the WSL:
+- Open your bash configuration: `vim ~/.bashrc`
+- Add to the end of the file and save/exit:
+`alias jupyter-notebook="~/.local/bin/jupyter-notebook --no-browser"`
+- Update your bash profile: `source ~/.bashrc`
+Now you can run a jupyter server jupyter-notebook and access the service with your browser from Windowslocalhost:8888.
+
+You are all set now, spartans. Go to "[Download Packages](https://github-research.gatech.edu/YJSP/engine-designer/edit/master/README.md#download-packages)" now and follow the procedures there.
+
+**NOTE** - The procedures for Linux OS now is applicable (everywhere) for Windows command prompt, provided that the above procedures are followed correctly. Henceforth, if you see a procedure stated for Ubuntu OS in the upcoming RocketCEA installation, it is also applicable for Windows OS.
+
+## FOR MAC:
 
 The rocketCEA setup requires that you have Python setup with homebrew. The following guide can help you set this up.
 
@@ -22,7 +79,7 @@ Homebrew + Python Installation Guide: https://docs.python-guide.org/starting/ins
 Run this command in terminal to get 3.8 working (optional):
 $ export PATH="/usr/local/opt/python@3.8/bin:$PATH"
 
-FOR LINUX:
+## FOR LINUX:
 
 Your Linux installation should already come with Python 3 installed. 
 To check version: $ python3 --version
@@ -34,7 +91,16 @@ With that taken care of, you should be good to install the packages listed in th
 
 https://rocketcea.readthedocs.io/en/latest/quickstart.html
 
-Note for Mac:
+**NOTE** - When you reach `Try a quick test of the install by pasting the following into a command terminal:` statement under **Install RocketCEA** section in the RocketCEA installation documentation in the above specified website, use this command 
+`python3 -c "from rocketcea.cea_obj import CEA_Obj; C=CEA_Obj(oxName='LOX', fuelName='LH2'); print(C.get_Isp())"` 
+
+instead of 
+
+`python -c "from rocketcea.cea_obj import CEA_Obj; C=CEA_Obj(oxName='LOX', fuelName='LH2'); print(C.get_Isp())"` 
+
+Yes, just add "3" after `python` (i.e. `python3`), instead of just typing `python .......`
+
+## Note for Mac:
 
 Everything went fine except when trying to pip3 install genericf2py
 
@@ -42,7 +108,6 @@ I was met with: Preparing wheel metadata ... error
 
 To fix, try running with this option: pip3 install genericf2py==0.1.17
 
-If you attempt a Windows installation and you end up figuring it out, please let me know and we can document useful information here.
 
 # Design an Engine (no Regen)
 
