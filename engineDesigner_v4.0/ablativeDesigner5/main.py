@@ -9,8 +9,8 @@ warnings.filterwarnings("ignore", message="Support for FigureCanvases without a 
 # For basic engine configuration and adjustment
 
 # SELECT VEHICLE
-vehicle = "Darcy Space"
-#vehicle = "KeraLOX"
+#vehicle = "Darcy Space"
+vehicle = "KeraLOX"
 
 show_contour_plot = False
 
