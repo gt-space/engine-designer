@@ -180,7 +180,6 @@ class Ablative:
             R = self.R
             r = self.y
             vol = self.ablative.compute_hollow_cyl_vol(x, y, R, r)
-            print("vol_insert (m^3): " + str(vol))
             mass = self.mat.rho*vol
 
             return mass
@@ -617,7 +616,7 @@ class Ablative:
 
 
             print(" ")
-            print("========================================================")
+            print("=========== ++ Liner Thicknesses ++ =====================")
             print(" ")
             print("Ablator Thickness (in): " + str(t_A/.0254))
             print("Insulator Thickness (in): " + str(t_I/.0254))
@@ -627,7 +626,7 @@ class Ablative:
         else:
             t_I = []
             print(" ")
-            print("========================================================")
+            print("=========== ++ Liner Thicknesses ++ =====================")
             print(" ")
             print("Ablator Thickness (in): " + str(t_A / .0254))
             print("Overwrap Thickness (in): " + str(t_OW / .0254))
