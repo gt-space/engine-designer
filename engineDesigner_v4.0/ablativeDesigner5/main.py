@@ -164,6 +164,7 @@ t_th=insert.t_w
 wall_idx=engine.throatInd_engprops
 T_w=  engine.engineProps[wall_idx, 9]
 (h_g, q_conv, T_aw) = bartz(engine, T_w, wall_idx)
+print(" ")
 print("================= ++ Miscellaneous Stuff ++ ================")
 print("T_w (K): " +str(T_w))
 print("h_g_throat (W/m^2K) : " +str(h_g))
