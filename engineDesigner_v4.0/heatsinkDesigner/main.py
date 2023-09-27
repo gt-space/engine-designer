@@ -2,15 +2,16 @@ import numpy as np
 from matplotlib import pyplot as plt
 from design import Engine
 from heatsink import HeatSink
-
+import warnings
+warnings.filterwarnings("ignore", message="Support for FigureCanvases without a required_interactive_framework attribute was deprecated")
 ## GENERAL INPUT PARAMETERS ##
 # For basic engine configuration and adjustment
-thrust = 22859 # Thrust [lbf to N]
-P_c = 250 * 0.0689476 # Chamber pressure at injector face [psi to bar]
-P_e = 8 / 14.508 # Desired exit presure for expansion ratio [bar] (if in doubt put ambient)
-con_rat = 3.75 # Contraction ratio
-L_star = 1.05 # Characteristic length [m] (for recommended values see H&H pg. 72)
-MR = 2.0 # Mixture Ratio
+thrust = 2500*4.4482216153 # Thrust [lbf to N]
+P_c = 300 * 0.0689476 # Chamber pressure at injector face [psi to bar]
+P_e = 10 / 14.508 # Desired exit presure for expansion ratio [bar] (if in doubt put ambient)
+con_rat = [] # Contraction ratio
+L_star = 1.2 # Characteristic length [m] (for recommended values see H&H pg. 72)
+MR = 1.8 # Mixture Ratio
 
 ## ADVANCED INPUT PARAMETERS ##
 # For fine tuning the nozzle geometry. See Sutton pg. 80 for helpful graphic
@@ -35,17 +36,18 @@ print("LOX Mass Flow Rate [kg/s]: " + str(engine.mDot_o))
 print("Throat Area [m^2]: " + str(engine.A_t))
 print("C-star [m/s]: " + str(engine.C_star))
 print("Exit angle [deg]: " + str(engine.theta_e))
-print("Chamber Radius [m]: " + str(engine.engineProps[0, 0]))
-print("Exit Radius [m]: " + str(engine.engineProps[-1, 0]))
+print("Chamber Radius [in]: " + str(engine.engineProps[0, 0]/.0254))
+print("Exit Radius [in]: " + str(engine.engineProps[-1, 0]/.0254))
 print("Expansion Ratio: " + str(np.pi * engine.engineProps[-1, 0]**2 / engine.A_t))
 print(" ")
-
+plt.figure()
 plt.plot(engine.engineProps[:, 1] / 0.0254, engine.engineProps[:, 0] / 0.0254)
 plt.xlabel('Distance from Injector [in]', fontsize=16)
 plt.ylabel('Radius [in]', fontsize=16)
 plt.title("Engine Contour")
 plt.xlim(0, engine.engineContour[-1, 1] / .0254)
 plt.ylim(0, engine.engineContour[-1, 1] / .0254)
+plt.show()
 
 #Hot Fire parameters
 run_time = 40 #secs
