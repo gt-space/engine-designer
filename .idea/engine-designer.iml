@@ -6,6 +6,7 @@
       <sourceFolder url="file://$MODULE_DIR$/engineDesigner_v4.0" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/engineDesigner_v4.0/regenDesigner" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/engineDesigner_v4.0/contourDesigner" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/engineDesigner_v4.0/heatsinkDesigner" isTestSource="false" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
