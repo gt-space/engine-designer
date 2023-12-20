@@ -54,7 +54,7 @@ np.set_printoptions(threshold=sys.maxsize) # Print setting for debugging arrays
 ## DEFINE ENGINE CLASS ##
 class Engine:
     # Upon declaration of a new engine:
-    def __init__(self, thrust, P_inj, P_e, con_rat, adv_data, MR=2, wall_MR = 2, L_star=1.05, cstar_eff = 1, numPTS = 200, fuel="JetA",ox="LOX"):
+    def __init__(self, thrust, P_inj, P_e, con_rat, adv_data, MR=2, wall_MR = 2, L_star=1.05, cstar_eff = 1, numPTS = 200, fuel="JetA",ox="LOX",preset_chamber_ID=[]):
         self.noz_correction = []
         self.thrust = thrust # thrust: Design thrust [N]
         self.P_inj = P_inj # P_inj: Injector face pressure [bar]
@@ -68,6 +68,7 @@ class Engine:
         self.numPTS = numPTS
         self.ox = ox
         self.fuel = fuel
+        self.preset_chamber_ID = preset_chamber_ID
 
     # Main design function
     def design_engine(self):
@@ -115,6 +116,12 @@ class Engine:
         if self.con_rat==[]:
             D_t_cm = self.R_t * 200
             self.con_rat = 8.0 * D_t_cm ** (-0.6) + 1.25
+
+        if self.preset_chamber_ID!=[]:
+            R_cc=self.preset_chamber_ID/2
+            self.con_rat = (R_cc/self.R_t)**2
+
+
         # Generate engine contour from external function:
         (self.engineContour, chBarrel, nozzleContour, self.R_tCurve, self.throatInd, self.conLeadInRadius, self.theta_e, self.throat_end_ind, self.throatInd_engprops,self.chBarrel_endInd) = get_contour(self.R_t, self.con_rat, exp_rat, self.L_star, self.adv_data, self.numPTS)
         self.nozzleContour = nozzleContour
