@@ -9,10 +9,11 @@ warnings.filterwarnings("ignore", message="Support for FigureCanvases without a 
 # For basic engine configuration and adjustment
 
 # SELECT VEHICLE
-#vehicle = "Darcy Space"
-vehicle = "KeraLOX"
+#vehicle = "KeraLOX"
+#vehicle = 'Vespula'
+vehicle = "Darcy Space"
+show_contour_plot = True
 
-show_contour_plot = False
 
 if vehicle=="Darcy Space":
     thrust = 1400*4.44822 # Thrust [N]
@@ -36,11 +37,11 @@ if vehicle=="Darcy Space":
     eta_c = .9
     burn_time = 40  # s
     #Envelope is 17 in length and 5.53in diameter OD max right now for DARCY
-
+    preset_chamber_ID = []
 if vehicle =="KeraLOX":
     thrust = 800 * 4.44822  # Thrust [N]
     P_c = 18  # Chamber pressure at injector face [psi to bar]
-    P_e = 12 / 14.508  # Desired exit presure for expansion ratio [bar] (if in doubt put ambient)
+    P_e = 12 / 14.5038  # Desired exit presure for expansion ratio [bar] (if in doubt put ambient)
     # con_rat = 8.0 * D_t^-0.6 + 1.25 where D_t is in cm
     con_rat = []  # Contraction ratio sized using correlation in code
     L_star = 1.1  # Characteristic length [m] (for recommended values see H&H pg. 72)
@@ -55,6 +56,27 @@ if vehicle =="KeraLOX":
     insert_contour = True
     eta_c = .9
     burn_time = 40  # s
+    preset_chamber_ID = []
+if vehicle =="Vespula":
+    thrust = 2500 * 4.44822  # Thrust [N]
+    P_c = 300/14.5038  # Chamber pressure at injector face [psi to bar]
+    P_e = 10 / 14.5038  # Desired exit presure for expansion ratio [bar] (if in doubt put ambient)
+    # con_rat = 8.0 * D_t^-0.6 + 1.25 where D_t is in cm
+    con_rat = []  # Contraction ratio sized using correlation in code
+    L_star = 1.1  # Characteristic length [m] (for recommended values see H&H pg. 72)
+    MR = 2  # Mixture Ratio
+    ox="LOX"
+    fuel="JetA"
+    t_A = 0.75 * .0254
+    t_I = 0
+    t_OW = 0.125 * .0254
+    FOS_th = 3  # this is for the throat insert
+    FOS_OW = 3
+    insert_contour = True
+    eta_c = .85
+    burn_time = 25  # s
+    preset_chamber_ID = 8*.0254
+
 ## ADVANCED INPUT PARAMETERS ##
 # For fine tuning the nozzle geometry. See Sutton pg. 80 for helpful graphic
 adv_data = {"solve_bell": True, # Solve with a bell nozzle instead of a conical one
@@ -67,7 +89,7 @@ adv_data = {"solve_bell": True, # Solve with a bell nozzle instead of a conical 
             "percent_of_conical": 80} # Percent length compared to conical alternative (Should be ~80%)
 
 ## CALL DESIGN SCRIPT ##
-engine = Engine(thrust, P_c, P_e, con_rat, L_star = L_star, MR = MR, adv_data = adv_data,ox = ox,fuel = fuel, cstar_eff=eta_c) # Create engine object given params
+engine = Engine(thrust, P_c, P_e, con_rat, L_star = L_star, MR = MR, adv_data = adv_data,ox = ox,fuel = fuel, cstar_eff=eta_c,preset_chamber_ID=preset_chamber_ID) # Create engine object given params
 engine.design_engine() # Call the design function
 ablative = Ablative(engine, run_time=40, T_wall_i=3220, split=0)
 
@@ -110,7 +132,8 @@ if show_contour_plot:
 contour_extra = engine.engineContour[:,[1,0]]/.0254
 zero_arr= np.zeros((len(contour_extra),1))
 contour_extra = np.hstack((contour_extra,zero_arr))
-np.savetxt('Contour_in_CAD_Export.txt', contour_extra, delimiter=' ', fmt='%s')
+name = ["Contour_in_",str(vehicle), "_.txt"]
+np.savetxt("".join(name), contour_extra, delimiter=' ', fmt='%s')
 
 # ======================= Engine Liner Thicknesses  ============================
 
@@ -120,7 +143,7 @@ if vehicle=="Darcy Space":
     insulator_mat = ablative.SilicaEpoxy()
     insulator = ablative.Insulator(insulator_mat)
 
-if vehicle == "KeraLOX":
+if vehicle == "KeraLOX" or vehicle =="Vespula":
     ablator_mat = ablative.SilicaEpoxy()
     insulator =[] # This means there is no insulator, so it sizes the engine based only on an overwrap & an ablator
     # (the ablator is therefore insulative)
@@ -171,10 +194,45 @@ print("h_g_throat (W/m^2K) : " +str(h_g))
 print("q_conv_throat (W/m^2) : " +str(q_conv))
 print("Temp_throat (K): " +str(T_aw))
 print("Thickness_throat (in): " +str(t_th/.0254))
+T_th_back = T_w-q_conv*t_th/insert.mat.k
 
+print("Temp_back_throat (K):"+str(T_th_back))
 stress_perc_th = overwrap.stress_dist()
 
 print("Perc of overwrap stresses are thermal: " +str(stress_perc_th*100)+" %")
+
+
+
+#=========
+wall_idx = -1
+T_w=  engine.engineProps[wall_idx, 9]
+(h_g, q_conv, T_aw) = bartz(engine, T_w, wall_idx)
+print(" ")
+print("T_w_end (K): " +str(T_w))
+print("h_g_end (W/m^2K) : " +str(h_g))
+print("q_conv_end (W/m^2) : " +str(q_conv))
+print("Temp_end (K): " +str(T_aw))
+print("Thickness_throat (in): " +str(t_th/.0254))
+T_end_back = T_w-q_conv*t_th/insert.mat.k
+print("Temp_back_end (K):"+str(T_end_back))
+
+#=========
+wall_idx = 1
+T_w=  engine.engineProps[wall_idx, 9]
+(h_g, q_conv, T_aw) = bartz(engine, T_w, wall_idx)
+print(" ")
+print("T_w_end (K): " +str(T_w))
+print("h_g_end (W/m^2K) : " +str(h_g))
+print("q_conv_end (W/m^2) : " +str(q_conv))
+print("Wall_temp(K): " +str(T_aw))
+print("Ablator Thickness (in): " +str(t_A/.0254))
+T_end_back = T_w-q_conv*t_A/ablator.mat.k
+print("Temp_liner_back (K):"+str(T_end_back))
+
+
+
+
+
 
 #print("Throat Insert Thickness [in]: " + str(t_th/.0254))
 #print("Throat Insert Mass [lbm]: " + str(t_th_mass))

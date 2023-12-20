@@ -1,10 +1,10 @@
 from rocketcea.cea_obj import CEA_Obj
-ox = 'N2O'
-fuel = 'Isopropanol'
+ox = "LOX"
+fuel = "JetA"
 con_rat = 4.514
-exp_rat = 4.5
-P_inj_psi= 750
-MR= 4
+exp_rat = 2
+P_inj_psi= 500
+MR= []
 
 ispObj = CEA_Obj(oxName=ox, fuelName=fuel, fac_CR=con_rat)
 
