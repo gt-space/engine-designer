@@ -2,13 +2,13 @@
 # Calls design.py and gathers results for printing and plotting
 import sys
 # Uncomment and modify the following sys.path.insert line with the path of your file if "ModuleNotFoundError: No module named '...'" exception is given:
-#sys.path.insert(0, '/Users/saakethramramoju/Desktop/engineDesigner_v5.0')
+sys.path.insert(0, '/Users/atand/OneDrive/Documents/Code stuff/engine-designer/engineDesigner_v5.0')
 import numpy as np
 import matplotlib.pyplot as plt
 from contourDesigner.design import Engine
 import warnings
 from heatsinkDesigner.heatsink import Heatsink
-from regenDesigner.bartz import bartz
+# from regenDesigner.bartz import bartz
 #from regenDesigner.bartz import bartz_x
 warnings.filterwarnings("ignore", message="Support for FigureCanvases without a required_interactive_framework attribute was deprecated")
 np.set_printoptions(linewidth=1000000)
@@ -65,7 +65,8 @@ adv_data = {"solve_bell": True, # Solve with a bell nozzle instead of a conical 
 
 ## CALL DESIGN SCRIPT ##
 preset_chamber_ID = preset_chamber_ID / 39.37 # inches to meters
-engine = Engine(thrust, P_c, P_e, con_rat, L_star = L_star, MR = MR, adv_data = adv_data, cstar_eff = cstar_eff, numPTS = numPTS, fuel = fuel, ox = ox, preset_chamber_ID=preset_chamber_ID) # Create engine object given params
+film_cooling_props = ["liquid",.5, 4, .02, .9, 2e5, 400] # coolant_initial_state ("liquid" or "gas"), total_mdot_coolant, num_orifices, diameter_orifice, orifice_cstar, pressure_orifice, temp_orifice
+engine = Engine(thrust, film_cooling_props, P_c, P_e, con_rat, L_star = L_star, MR = MR, adv_data = adv_data, cstar_eff = cstar_eff, numPTS = numPTS, fuel = fuel, ox = ox, preset_chamber_ID=preset_chamber_ID) # Create engine object given params
 engine.design_engine() # Call the design function
 
 
