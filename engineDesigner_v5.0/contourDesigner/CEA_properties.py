@@ -81,7 +81,7 @@ def get_props(chBarrel, nozzleContour, throatInd, ispObj, P_inj_psi, MR, A_t, cs
     "RHO, KG/CU M", "H, KJ/KG", "U, KJ/KG", "M, (1/n)", "Cp, KJ/(KG)(K)", "GAMMAs", "SON VEL,M/SEC",
     "VISC,MILLIPOISE", "CONDUCTIVITY  ", "PRANDTL NUMBER"]
 
-    # Items that do not have intector face data in the output string
+    # Items that do not have injector face data in the output string
     no_inj = ["Ae/At", "CF", "Ivac, M/SEC", "Isp, M/SEC"]
 
     # Items that appear more than once
@@ -140,6 +140,33 @@ def get_props(chBarrel, nozzleContour, throatInd, ispObj, P_inj_psi, MR, A_t, cs
 
     engineProps = np.concatenate((chamberProps, nozzleProps))
 
-
-
     return engineProps
+
+
+# functions to convert from standard metric (kg, seconds, meters, Kelvin, Pascals, Joules) to units used in CEA or vice versa
+
+# cea units: ft/s for cstar and velocities, psia for pressure, degR for temp, BTU/lbm for enthalpy,
+# lbm/ft**3 for density, btu/lbm degR for specific energy capacity, millipoise for viscosity, mcal/cm-K-s for thermal conductivity
+
+# metric units used : m/s for cstar and velocities, pascals for pressure, K for temp, J/kg for enthalpy,
+# kg/m**3 for density, J/kgK for specific energy capacity, Pa*s for viscosity, J/m*K*s for thermal conductivity
+
+def ceaToSI(number, value):
+    cea_to_si_conversions = {"velocity": .3048, "pressure": 6894.76, "temperature": 5/9, 
+                            "enthalpy": 2326, "density": 16.018, "specific heat": 2326 / (5 / 9),
+                            "viscosity": 1e-4, "conductivity": 418.4}
+    try:
+        return number * cea_to_si_conversions[value]
+    except KeyError:
+        print("Unrecognized value string: " + value)
+        return number
+
+def siToCEA(number, value):
+    cea_to_si_conversions = {"velocity": .3048, "pressure": 6894.76, "temperature": 5/9, 
+                            "enthalpy": 2326, "density": 16.018, "specific heat": 2326 / (5 / 9),
+                            "viscosity": 1e-4, "conductivity": .4184}
+    try:
+        return number / cea_to_si_conversions[value]
+    except KeyError:
+        print("Unrecognized value string: " + value)
+        return number
