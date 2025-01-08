@@ -1,7 +1,7 @@
 import numpy as np
 from regenDesigner.fuel_props import JetA
-from contourDesigner.CEA_properties import siToCEA
 from contourDesigner.CEA_properties import ceaToSI
+from contourDesigner.CEA_properties import siToCEA
 
 # assuming that liquid coolant instantly vaporizes upon injection
 class gas_film_cooling:
