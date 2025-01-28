@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 from regenDesigner.bartz import bartz
 from regenDesigner.bartz import hg_gas_film
 from regenDesigner.bartz import hg_boiling_liquid_film
-from regenDesigner.fuel_props import JetA
+from utils.fuel_props import JetA
 
 class Heatsink:
     def __init__(self, engine, thickness, hotfire_time, chamber_inner_diameter, graphite_OD = 0.75, graphite_start_index = 130, graphite_end_index = 159, dt = 1.0, radial_subdivisions = 1000, T_initial = 298.15): #, axial_subdivisions = 10):
@@ -117,15 +117,18 @@ class Heatsink:
         # Finds wall temperature and convective coeffcient by iterating Bartz correlation several times at each axial station for a given time in time_list
         dz = (self.engine.engineProps[1,1]-self.engine.engineProps[0,1])*.3048 # feet to m
         T_hg = self.engine.engineProps[z,9] # approximate mainstream gas temp to be gas temp without film cooling
-        M_wt = self.engine.film_cooling[-1][1]
         u_cool = -np.inf
         gas_film = gas_film_present
+        gas_film = False
+        gas_film_present = False
         heat_flux_wall = .0 # can update later to get more accurqate h_g for liquid film
         deltaQ = 0 # can update later to get more accurate u_cool values for gas film
         for i in range(0, 10):
-            if film_cool_type == "liquid" and z * dz < self.engine.film_cooling[-1][2]:
+            if film_cool_type == "liquid" and z * dz < self.engine.film_cooling[-1][2] and z > 5:
+                M_wt = self.engine.film_cooling[-1][1]
                 hg  = hg_boiling_liquid_film(self.engine, self.temps[t, z, 0], T_hg, heat_flux_wall, M_wt, z, dz)
-            elif film_cool_type == "gas" and gas_film_present:
+            elif film_cool_type == "gas" and gas_film_present and z > 5:
+                M_wt = self.engine.film_cooling[-1][1]
                 hg, u_cool, gas_film = hg_gas_film(self.engine, self.temps[t, z, 0],T_hg, deltaQ, last_wall_temp, last_u_cool, M_wt, z, dz)
             else:
                 hg = bartz(self.engine, self.temps[t, z, 0], z)[0]
@@ -137,12 +140,21 @@ class Heatsink:
         # Iterates along every axial station and time in time_list to find overall temperature history at each axial station along the wall thickness
         hg_list = []
         last_wall_temp = 298.15 # (K)
-        last_u_cool = self.engine.film_cooling[-1][-1]
+        if len(self.engine.film_cooling) > 0:
+            last_u_cool = self.engine.film_cooling[-1][-1]
+            film_cool_type = self.engine.film_cooling[0]
+        else:
+            last_u_cool = -np.inf
+            film_cool_type = None
         gas_film_present = True # if engine is film cooled with gas, the coolant is separate from mainstream flow at the injector
         for z in range(len(self.temps[0, :, 0])):
             for t in range(1, len(self.temps[:, 0, 0])):
-                hg, last_wall_temp, last_u_cool, gas_film_present = self.iterate(t,z,film_cool_type=self.engine.film_cooling[0],last_wall_temp=last_wall_temp,last_u_cool=last_u_cool, gas_film_present=gas_film_present)
+                hg, last_wall_temp, last_u_cool, gas_film_present = self.iterate(t,z,film_cool_type=film_cool_type,last_wall_temp=last_wall_temp,last_u_cool=last_u_cool, gas_film_present=gas_film_present)
+                print("iteration complete")
             hg_list.append(hg)
+        if len(self.engine.film_cooling) > 0: # and not gas_film_present:
+            self.engine = self.engine.film_cooling[-2] # replace Engine with updated MR Engine if homogeneous temp. is reached
+            print(f'engine obj: {self.engine}')
         return self.temps, hg_list
     # temps: full wall temperature history (3d array)
     # hg_list: list of convective coefficients at all axial stations

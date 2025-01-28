@@ -1,5 +1,5 @@
 import numpy as np
-from regenDesigner.fuel_props import JetA
+from utils.fuel_props import JetA
 from contourDesigner.CEA_properties import ceaToSI
 from contourDesigner.CEA_properties import siToCEA
 
@@ -24,11 +24,10 @@ class gas_film_cooling:
         self.u0_gas = self.mdot_props/ (self.rho0_comb_gases * init_area) # approximate mainstream gas speed as initial speed
         self.u0_cool = self.mdot_cool / (self.rho0_cool * init_area)
         self.beta_eff = np.arctan(np.sin(beta)/(np.cos(beta)+self.rho0_comb_gases*self.u0_gas/(self.rho0_cool*self.u0_cool)))
-        self.eta= .25 # conservative value for film cooling efficiency ; future models should actually solve for this
+        self.eta= .6 # conservative value for film cooling efficiency
 
     # estimates wall temperature while coolant is at a different temperature than mainstream gases
     # uses averages / estimations along a specficied target film length
-    # this the first guess used in the transient correlation in bartz.py
     def get_guess_temp_arr(self, target_fcl, adiabatic_wall_temp):
         end_index = np.floor(target_fcl / self.dz) # index in radii corresponding to target cooled length
         film_cooled_area = self.get_film_cooled_area(end_index)
@@ -44,10 +43,31 @@ class gas_film_cooling:
         # correlation from H&H
         e_term = np.exp(-h_g/(G_c*cp_cool*self.eta))
         G_c = self.mdot_cool/film_cooled_area # average coolant mass flux (kg/m^2*s)
-        temp_term = self.adiabatic_wall_temp /(self.adiabatic_wall_temp-self.orifice_temp)
-        max_temp = (temp_term-e_term)*(self.adiabatic_wall_temp-self.orifice_temp) # wall temp at end of film cooled length
+        temp_term = adiabatic_wall_temp /(adiabatic_wall_temp-self.orifice_temp)
+        max_temp = (temp_term-e_term)*(adiabatic_wall_temp-self.orifice_temp) # wall temp at end of film cooled length
 
         return np.linspace(self.orifice_temp, max_temp, end_index)
+    
+    def get_target_mdot_cool(self, adiabatic_wall_temp=500,target_fcl=7.5*2.54/100,):
+        # end_index = np.floor(target_fcl / self.dz) # index in radii corresponding to target cooled length
+        # film_cooled_area = self.get_film_cooled_area(end_index)
+        film_cooled_area = (0.001730371398473978/(np.pi*self.radii[1]**2))*(2*np.pi*self.radii[1])
+
+        avg_temp = (self.orifice_temp+adiabatic_wall_temp)/2 # average chamber temperature (K); probably an overestimate (conservative)
+        cp_cool = JetA.get_cp_vapor(avg_temp) # specific heat at constant pressure, J/kgK
+        alpha_cool = JetA.get_conductivity(avg_temp)/(JetA.get_rho_v(avg_temp, self.pressure_cc)*cp_cool) # thermal diffusivity
+        print(f'alpha cool: {alpha_cool}')
+        u_gas = self.u0_gas
+        u_cool = self.u0_cool
+        # avg_L = np.pi*(self.radii[0]+self.radii[end_index])
+        # avg_L = 0.001730371398473978/(np.pi*self.radii[0]**2)
+        h_g = self.get_h_g(u_gas, u_cool, cp_cool, alpha_cool, 3, target_fcl/2)
+
+        # correlation from H&H
+        # e_term = np.exp(-h_g/(G_c*cp_cool*self.eta))
+        temp_term = np.log((adiabatic_wall_temp-400) /(adiabatic_wall_temp-self.orifice_temp))
+        G_c = -h_g/(cp_cool*self.eta*temp_term)
+        print(f'mdot cool: {G_c*film_cooled_area}')
 
     def get_u_inj_cool(self):
         return self.u0_cool
@@ -62,12 +82,12 @@ class gas_film_cooling:
 
         L = 2*np.pi*self.radii[i]/.3048 # circumference at axial location ; meters to feet
         term1 = ((self.S/.3048)*u_gas/alpha_cool)**(1/8) # .3048 is to convert meters to feet
-        term2 = 1+.4*np.arctan(u_gas/u_cool-1)
+        term2 = 1+.4*np.arctan(u_gas/u_cool-1) # assume u_gas>=u_cool
         term3 = np.log(np.cos(.8*self.beta_eff))
-        K = .4 # only considering convective heat transfer
+        K = .04
         h_g_term = (term3-np.log(self.eta))/(term1*term2)+K
         h_g = h_g_term * 2.205 * self.mdot_props * cp_cool / (L*X/.3048) # 2.205 is to convert kg/s to lbm/s
-        return ceaToSI(h_g*.3048**2, "specific heat")
+        return ceaToSI(h_g*.3048**2, "specific heat") # back to standard metric
 
     # treat each axial segment as cylindrical
     def get_film_cooled_area(self, end_index):
@@ -77,7 +97,7 @@ class gas_film_cooling:
           area = 0
           counter = 0
           while True:
-            area += np.pi * self.radii(counter)**2 * self.dz
+            area += np.pi * self.radii[counter]**2 * self.dz
             counter += 1
             if counter == end_index:
                 return area

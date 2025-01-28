@@ -15,6 +15,7 @@ np.set_printoptions(linewidth=1000000)
 ## GENERAL INPUT PARAMETERS ##
 # For basic engine configuration and adjuqstment
 
+'''
 thrust = 2500 * 4.4482216153 # Thrust [lbf to N]
 P_c = 300 * 0.0689476 # Chamber pressure at injector face [psi to bar]
 P_e = 10 / 14.508 # Desired exit presure for expansion ratio [bar] (if in doubt put ambient)
@@ -26,21 +27,21 @@ numPTS = 200 # Number of axial stations along contour
 fuel = 'JetA' # Fuel type (https://rocketcea.readthedocs.io/en/latest/propellants.html)
 ox = 'LOX' # Oxidizer type (https://rocketcea.readthedocs.io/en/latest/propellants.html)
 preset_chamber_ID = 5.75 # Chamber inner diameter [in]
-
 '''
+
 # Subscale
 thrust = 800 * 4.4482216153 # Thrust [lbf to N]
 P_c = 261 * 0.0689476 # Chamber pressure at injector face [psi to bar]
 P_e = 18 / 14.508 # Desired exit presure for expansion ratio [bar] (if in doubt put ambient)
 con_rat = 4.5 # Contraction ratio
 L_star = 1.1 # Characteristic length [m] (for recommended values see H&H pg. 72)
-MR = 2 # Mixture Ratio
+MR = 1.8198 # Mixture Ratio
 cstar_eff = 1.0 # C-star Effeciency
 numPTS = 200 # Number of axial stations along contour
 fuel = 'JetA' # Fuel type (https://rocketcea.readthedocs.io/en/latest/propellants.html)
 ox = 'LOX' # Oxidizer type (https://rocketcea.readthedocs.io/en/latest/propellants.html)
 preset_chamber_ID = 4.68 # Chamber inner diameter [in]
-'''
+
 
 ## For Heatsink Design ##
 thickness = 0.85 # Chamber wall thickness [in]
@@ -65,7 +66,7 @@ adv_data = {"solve_bell": True, # Solve with a bell nozzle instead of a conical 
 
 ## CALL DESIGN SCRIPT ##
 preset_chamber_ID = preset_chamber_ID / 39.37 # inches to meters
-film_cooling_props = ["gas",.5, 4, .02, .9, 2e5, 400] # coolant_initial_state ("liquid" or "gas"), total_mdot_coolant, num_orifices, diameter_orifice, orifice_cstar, pressure_orifice, temp_orifice
+film_cooling_props = ["gas",.1, 4, .02, .9, 2e5, 295] # coolant_initial_state ("liquid" or "gas"), total_mdot_coolant, num_orifices, diameter_orifice, orifice_cstar, pressure_orifice, temp_orifice
 engine = Engine(thrust, film_cooling_props, P_c, P_e, con_rat, L_star = L_star, MR = MR, adv_data = adv_data, cstar_eff = cstar_eff, numPTS = numPTS, fuel = fuel, ox = ox, preset_chamber_ID=preset_chamber_ID) # Create engine object given params
 engine.design_engine() # Call the design function
 
@@ -105,18 +106,18 @@ heat = Heatsink(engine, thickness = thickness, hotfire_time = hotfire_time, cham
 
 #print(heat.graphite_test()) # determines which axial indices to start and end graphite insert
 temps, hg_list = heat.transient_solution() # finds full transient thermal solution at all time and axial indices. All plotting functions automatically do this.
-#print(temps) # K, print full wall temperature history (3d array)
-#print(hg_list[analysis_index]) # W/m^2-K, print convective coefficient at a given axial station
-#print(heat.temps[hotfire_time, :, :]) # heat.temps contains full temp history (self.temps[time_index, axial_index, radial_index])
-#heat.plot_transient_3d() # full 3d transient plot at each time index
-#heat.plot_wall_temp_gradient_at_station(hotfire_time, analysis_index)
-#heat.plot_inner_wall_temp_at_time(hotfire_time)
-#heat.plot_inner_wall_temp_at_station(analysis_index)
-#print(heat.mat) # visual representaion of matrial distribution throughout engine
+print(temps) # K, print full wall temperature history (3d array)
+print(hg_list[analysis_index]) # W/m^2-K, print convective coefficient at a given axial station
+print(heat.temps[hotfire_time, :, :]) # heat.temps contains full temp history (self.temps[time_index, axial_index, radial_index])
+heat.plot_transient_3d() # full 3d transient plot at each time index
+heat.plot_wall_temp_gradient_at_station(hotfire_time, analysis_index)
+heat.plot_inner_wall_temp_at_time(hotfire_time)
+heat.plot_inner_wall_temp_at_station(analysis_index)
+print(heat.mat) # visual representaion of matrial distribution throughout engine
 
 
 
-#plt.show()
+plt.show()
 
-#np.savetxt("CEA_props_TR7000_PC300_CR3-75_MR2_PE8_LS1-05.csv", engine.engineProps, delimiter=",")
-#np.savetxt("Temperature_History.csv", temps, delimiter=",") EDIT THIS
+np.savetxt("CEA_props_TR7000_PC300_CR3-75_MR2_PE8_LS1-05.csv", engine.engineProps, delimiter=",")
+np.savetxt("Temperature_History.csv", temps, delimiter=",") # EDIT THIS

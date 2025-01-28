@@ -7,7 +7,7 @@ import scipy.optimize as sci
 import sys
 sys.path.insert(0, '/Users/atand/OneDrive/Documents/Code stuff/engine-designer/engineDesigner_v5.0')
 
-from regenDesigner.fuel_props import JetA
+from utils.fuel_props import JetA
 from contourDesigner.CEA_properties import ceaToSI
 from contourDesigner.CEA_properties import siToCEA
 
@@ -17,7 +17,7 @@ class liquid_film_cooling:
     PI = np.pi
 
     def __init__(self, cea_obj, mdot_gas0, MR, Pc, d_chamber, pressure_chamber, eps,
-                 mdot_cool, pressure_orifice_cool, temp_orifice_cool, d_film_orifice, num_film_orifices, orifice_cstar, dz):
+                 mdot_cool, pressure_orifice_cool, temp_orifice_cool, d_film_orifice, num_film_orifices, orifice_cstar=1):
 
         self.cea_obj = cea_obj
         self.mdot_gas0 = mdot_gas0 # mass flow rate of non-cooling propellants, kg/s
@@ -28,11 +28,10 @@ class liquid_film_cooling:
         self.mdot_cool = mdot_cool
         self.temp_orifice_cool = temp_orifice_cool
         self.pressure0_cool = pressure_orifice_cool
-        self.dz = dz
         self.pressure_cc = pressure_chamber # Pascals, this is kinda random for now
 
         self.area_film_orifice = liquid_film_cooling.PI *(d_film_orifice / 2)**2 * orifice_cstar
-        self.rho_inj_cool = JetA.get_rho_l(temp_orifice_cool, self.pressure0_cool)
+        self.rho_inj_cool = JetA.get_rho_l(temp_orifice_cool)
         self.u_inj_cool = self.mdot_cool / (self.rho_inj_cool * self.area_film_orifice * num_film_orifices)
         self.mew_inj_l_cool = JetA.get_l_dynamic_viscosity(temp_orifice_cool)
 
@@ -49,7 +48,6 @@ class liquid_film_cooling:
     # https://arc.aiaa.org/doi/pdf/10.2514/6.2004-3360, equation 4
     # simpler model for film cooled length
     # first term finds length before liquid starts boiling, second term finds length after liquid starts boiling
-    # something might be wrong with this (getting negative h_g values but unsure if this a result of inaccurate inputs)
     def solve_fcl_stechman(self):
         sigma = .5 # film stability, this is a minimum value of sigma
         pressure_cc = self.pressure_cc
@@ -58,7 +56,7 @@ class liquid_film_cooling:
         temp_sat = JetA.get_saturation_temp(pressure_cc)
         # Average coolant cp value between initial and saturated temperature
         cpL = (JetA.get_c_liquid(temp_sat) + self.cp_inj_coolant) / 2
-        h_fg = JetA.get_h_fg(temp_sat)
+        h_fg = JetA.get_h_fg()
         cp_gas = ceaToSI(self.cea_obj.get_Chamber_Cp(Pc=siToCEA(self.Pc,"pressure"),MR=self.MR,eps=self.eps),"specific heat")
         hG_no_film = ceaToSI(self.cea_obj.get_Chamber_H(
             Pc=siToCEA(self.Pc, 'pressure'), MR=self.MR, eps=self.eps),'enthalpy')
@@ -90,8 +88,8 @@ class liquid_film_cooling:
         # conservative when considered as a surface temperature
         temp_avg_l_cool = (self.temp_orifice_cool + temp_sat_cool) / 2
         c_l_cool = JetA.get_c_liquid(temp_avg_l_cool)
-        rho_l_cool = JetA.get_rho_l(temp_avg_l_cool, pressure)
-        h_fg = JetA.get_h_fg(temp_avg_l_cool) # specific heat of vaporization
+        rho_l_cool = JetA.get_rho_l(temp_avg_l_cool)
+        h_fg = JetA.get_h_fg() # specific heat of vaporization
         mew_l_cool = JetA.get_l_dynamic_viscosity(temp_avg_l_cool) # dynamic viscosity
      
         # these are chamber values without film cooling, calculated by CEA
@@ -198,7 +196,7 @@ class liquid_film_cooling:
         deltarho_cool = rho_l_cool - rho_v_cool
         a = 2.31e-4*reynold_l_cool**-0.35
         Em = 1 - (250*np.log(reynold_l_cool)-1265)/reynold_l_cool
-        tension = JetA.get_surface_tension(temp) # surface tension
+        tension = JetA.get_surface_tension() # surface tension
         We = rho_gas*u_gas**2*d_cc/(tension*(deltarho_cool/rho_gas)**0.25)
         return Em*np.tanh(a*We**1.25) 
 
