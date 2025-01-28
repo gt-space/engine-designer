@@ -118,23 +118,21 @@ class Heatsink:
         dz = (self.engine.engineProps[1,1]-self.engine.engineProps[0,1])*.3048 # feet to m
         T_hg = self.engine.engineProps[z,9] # approximate mainstream gas temp to be gas temp without film cooling
         u_cool = -np.inf
-        gas_film = gas_film_present
-        gas_film = False
-        gas_film_present = False
         heat_flux_wall = .0 # can update later to get more accurqate h_g for liquid film
         deltaQ = 0 # can update later to get more accurate u_cool values for gas film
+        print(f'z:{z},gas film present?: {gas_film_present}')
         for i in range(0, 10):
             if film_cool_type == "liquid" and z * dz < self.engine.film_cooling[-1][2] and z > 5:
                 M_wt = self.engine.film_cooling[-1][1]
                 hg  = hg_boiling_liquid_film(self.engine, self.temps[t, z, 0], T_hg, heat_flux_wall, M_wt, z, dz)
             elif film_cool_type == "gas" and gas_film_present and z > 5:
                 M_wt = self.engine.film_cooling[-1][1]
-                hg, u_cool, gas_film = hg_gas_film(self.engine, self.temps[t, z, 0],T_hg, deltaQ, last_wall_temp, last_u_cool, M_wt, z, dz)
+                hg, u_cool, gas_film_present = hg_gas_film(self.engine, self.temps[t, z, 0],T_hg, deltaQ, last_wall_temp, last_u_cool, M_wt, z, dz)
             else:
                 hg = bartz(self.engine, self.temps[t, z, 0], z)[0]
             _, final_temps = self.transient(hg, t, z)
             self.temps[t, z, :] = final_temps
-        return hg, final_temps[0], u_cool, gas_film
+        return hg, final_temps[0], u_cool, gas_film_present
     
     def transient_solution(self):
         # Iterates along every axial station and time in time_list to find overall temperature history at each axial station along the wall thickness
@@ -150,11 +148,9 @@ class Heatsink:
         for z in range(len(self.temps[0, :, 0])):
             for t in range(1, len(self.temps[:, 0, 0])):
                 hg, last_wall_temp, last_u_cool, gas_film_present = self.iterate(t,z,film_cool_type=film_cool_type,last_wall_temp=last_wall_temp,last_u_cool=last_u_cool, gas_film_present=gas_film_present)
-                print("iteration complete")
             hg_list.append(hg)
         if len(self.engine.film_cooling) > 0: # and not gas_film_present:
             self.engine = self.engine.film_cooling[-2] # replace Engine with updated MR Engine if homogeneous temp. is reached
-            print(f'engine obj: {self.engine}')
         return self.temps, hg_list
     # temps: full wall temperature history (3d array)
     # hg_list: list of convective coefficients at all axial stations
