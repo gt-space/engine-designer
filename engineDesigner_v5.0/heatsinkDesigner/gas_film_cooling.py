@@ -5,7 +5,7 @@ from contourDesigner.CEA_properties import siToCEA
 
 # assuming that liquid coolant instantly vaporizes upon injection
 class gas_film_cooling:
-    def __init__(self, beta, S, mdot_cool, mdot_props, pressure_inj, rho0_comb_gases, pressure_cc, orifice_temp, inj_temp, radii, dz):
+    def __init__(self, beta, S, mdot_cool, mdot_props, num_orifices,cd_orifice,orifice_d,pressure_inj, rho0_comb_gases, pressure_cc, orifice_temp, inj_temp, radii, dz):
         self.beta = beta # coolant injection angle relative to wall, radians
         self.S = S # coolant slot height (m)
         self.mdot_cool = mdot_cool # kg/s
@@ -21,10 +21,13 @@ class gas_film_cooling:
 
         self.rho0_cool = JetA.get_rho_v(JetA.get_saturation_temp(self.pressure_inj), self.pressure_inj) # largest possible density value at injector (conservative)
         init_area = np.pi*self.radii[0]**2
+        orifice_area = cd_orifice * np.pi*(orifice_d/2)**2
         self.u0_gas = self.mdot_props/ (self.rho0_comb_gases * init_area) # approximate mainstream gas speed as initial speed
-        self.u0_cool = self.mdot_cool / (self.rho0_cool * init_area)
+        self.u0_cool = self.mdot_cool / (self.rho0_cool * orifice_area)
         self.beta_eff = np.arctan(np.sin(beta)/(np.cos(beta)+self.rho0_comb_gases*self.u0_gas/(self.rho0_cool*self.u0_cool)))
-        self.eta= .6 # conservative value for film cooling efficiency
+        self.eta= .25 # conservative value for film cooling efficiency
+
+        self.chamber_r = .073
 
     # estimates wall temperature while coolant is at a different temperature than mainstream gases
     # uses averages / estimations along a specficied target film length
@@ -51,12 +54,11 @@ class gas_film_cooling:
     def get_target_mdot_cool(self, adiabatic_wall_temp=500,target_fcl=7.5*2.54/100,):
         # end_index = np.floor(target_fcl / self.dz) # index in radii corresponding to target cooled length
         # film_cooled_area = self.get_film_cooled_area(end_index)
-        film_cooled_area = (0.001730371398473978/(np.pi*self.radii[1]**2))*(2*np.pi*self.radii[1])
+        film_cooled_area = (0.001730371398473978/(np.pi*self.radii[1]**2))*(2*np.pi*self.chamber_r)
 
         avg_temp = (self.orifice_temp+adiabatic_wall_temp)/2 # average chamber temperature (K); probably an overestimate (conservative)
         cp_cool = JetA.get_cp_vapor(avg_temp) # specific heat at constant pressure, J/kgK
         alpha_cool = JetA.get_conductivity(avg_temp)/(JetA.get_rho_v(avg_temp, self.pressure_cc)*cp_cool) # thermal diffusivity
-        print(f'alpha cool: {alpha_cool}')
         u_gas = self.u0_gas
         u_cool = self.u0_cool
         # avg_L = np.pi*(self.radii[0]+self.radii[end_index])
@@ -67,7 +69,6 @@ class gas_film_cooling:
         # e_term = np.exp(-h_g/(G_c*cp_cool*self.eta))
         temp_term = np.log((adiabatic_wall_temp-400) /(adiabatic_wall_temp-self.orifice_temp))
         G_c = -h_g/(cp_cool*self.eta*temp_term)
-        print(f'mdot cool: {G_c*film_cooled_area}')
 
     def get_u_inj_cool(self):
         return self.u0_cool
@@ -80,9 +81,12 @@ class gas_film_cooling:
         cp_cool = siToCEA(cp_cool, "specific heat")
         alpha_cool = siToCEA(alpha_cool, "conductivity")
 
-        L = 2*np.pi*self.radii[i]/.3048 # circumference at axial location ; meters to feet
+        L = 2*np.pi*self.chamber_r/.3048 # circumference at axial location ; meters to feet
         term1 = ((self.S/.3048)*u_gas/alpha_cool)**(1/8) # .3048 is to convert meters to feet
-        term2 = 1+.4*np.arctan(u_gas/u_cool-1) # assume u_gas>=u_cool
+        if u_gas > u_cool:
+            term2 = 1+.4*np.arctan(u_gas/u_cool-1)
+        else:
+            term2 = (u_cool/u_gas)**(1.5*(u_cool/u_gas)-1)
         term3 = np.log(np.cos(.8*self.beta_eff))
         K = .04
         h_g_term = (term3-np.log(self.eta))/(term1*term2)+K

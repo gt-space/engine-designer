@@ -19,22 +19,50 @@ class JetA:
     aLiquid = np.array([.19049613e2, -.16918532e-1, .63022035e-3, -.13336577e-5, .94335638e-9])
 
     # https://github.com/gpavanb-old/GroupContribution/blob/master/data/Init_Data/posf10325_surr_init.xlsx
-    # is this actually mole fraction ??
     mole_fractions_dict = {"124 tmb" : .15, "iso-dodecane" : .3, "n-undecane" : 0.2,"pentyl-cyclohexane" : .35}
 
     acentric = -np.inf # defined & called in JetA.get_acentric_factor() ; DO NOT directly access this field
 
     # https://nvlpubs.nist.gov/nistpubs/Legacy/IR/nistir6659.pdf page 59
     @staticmethod
-    def get_rho_l(temp, pressure):
+    def get_rho_l(temp):
         # data = pd.read_excel('Jet-A Compressed Liquid Densities.xlsx',usecols=[1,2,3],skiprows=1)
 
         rhoSlope = (0.685-0.835)/(470-270) # From old data. Would be nice to update
         return (rhoSlope * (temp - 270) + 0.835) * 1000 #kg/m^3
     
     @staticmethod
+    def get_kinematic_viscosity(temp):
+        # Kinematic viscosity
+        viscK_c =  1.7825 * (1700 * math.exp(-0.026*(temp)) + 0.27) / 1000000 # Done with eyeballed curve fit. Should be updated to use a more rigorous method
+        return viscK_c
+
+    @staticmethod
+    def get_conductivity(temp):
+        # Conductivity
+        # Temperature in Celcius
+        # Cond_300K = 0.1150 W/mK, Cond_550K = 0.076 W/(m*K), Pg. 82
+        condSlope = (0.076-0.1150)/(550-300)
+
+        # return condSlope * (temp - 300) + 0.1150 #W/(m*K)
+        return .6
+      
+    @staticmethod
     def get_rho_v(temp, pressure):
-        return pressure / (JetA.R * temp) # ideal gas law
+        return pressure / (JetA.R * temp * JetA.get_Z(temp,pressure)) # state equation
+    
+    # https://asmedigitalcollection.asme.org/energyresources/article/136/1/012903/366580/Development-of-a-New-Correlation-of-Gas, equation 39
+    @staticmethod
+    def get_Z(temp, pressure):
+        T_r = temp/JetA.temp_crit
+        p_r = pressure/JetA.p_crit
+        term1 = (.702*np.exp(-2.5*T_r))*p_r**2
+        term2 = (5.524*np.exp(-2.5*T_r))*p_r
+        term3 = (.044*T_r**2-.164*T_r+1.15)
+        Z = term1 - term2 + term3
+        if Z < .8 or Z > 1.2:
+            Z = 1
+        return Z
 
     # a measure of how nonspherical molecules are
     # https://aiche.onlinelibrary.wiley.com/doi/epdf/10.1002/aic.690300615
@@ -61,7 +89,7 @@ class JetA:
         deltaTb = Tba - Tb
         
         # specific gravity deviations
-        S = JetA.get_rho_l(20+273.15,1.01325e5)/1000 # liquid density at 20 degrees C (and for now 1 atm) over water density at 5 degrees C
+        S = JetA.get_rho_l(20+273.15)/1000 # liquid density at 20 degrees C (and  1 atm) over water density at 5 degrees C
         Sa = np.dot(C_S, M_arr)
         deltaS = S-Sa
 
@@ -71,13 +99,13 @@ class JetA:
         A_arr = np.insert(A_arr, 0, 1)
         deltaST_arr = np.array([1, deltaS, deltaTb, deltaS**2, deltaS*deltaTb, deltaTb**2, deltaS**3, deltaS**2*deltaTb, deltaS*deltaTb**2,deltaTb**3])
         JetA.acentric = (theta_A + np.dot(A_arr, deltaST_arr))/JetA.temp_crit
-        print(f"acentric factor: {JetA.acentric}")
 
         return JetA.acentric
     
-    def get_surface_tension(temp):
-        return .1 # dummy value so can debug rest of code
-    
+    @staticmethod
+    def get_surface_tension():
+        return .1 # water value
+
     @staticmethod
     def get_cp_vapor(temp):
         tempVec = np.array([0, temp, temp**2, temp**3, temp**4])
@@ -96,18 +124,19 @@ class JetA:
     # then subtract those & add the known hfg value to that
     # https://web.stanford.edu/group/haiwanglab/HyChem/approach/Report_Jet_Fuel_Thermochemical_Properties_v6.pdf
     @staticmethod
-    def get_h_fg(sat_temp):
+    def get_h_fg():
         return .36e6
     
     # https://www.sciencedirect.com/science/article/pii/S0017931016309887?via%3Dihub#s0100, B4
     @staticmethod
     def get_v_dynamic_viscosity(temp):
-        zeta = .176*(JetA.temp_crit/(JetA.M**3*JetA.p_crit**4))**(1/6)*10**(-10/3)
-        temp_r = temp / JetA.temp_crit # reduced temperature
-        print(f"reduced temp: {temp_r}")
+        # zeta = .176*(JetA.temp_crit/(JetA.M**3*JetA.p_crit**4))**(1/6)*10**(-10/3)
+        # temp_r = temp / JetA.temp_crit # reduced temperature
+        # print(f"reduced temp: {temp_r}")
         # return (.807*temp_r**.618-.357*np.exp(-.449*temp_r)+.34*np.exp(-4.058*temp_r)+.018) / zeta
-        return 1.5e-5 # dummy value ; this is water viscosity at 2,000K
+        return 1.5e-5 # dummy value ; this is water viscosity at 2,000K (actual equations aren't working)
     
+    @staticmethod
     def get_l_dynamic_viscosity(temp):
         # tmb: https://dhc-solvent.de/downloads/DHC_SDS_042_en.pdf
         tmb_slope = (.528 - .727) / 30_000
@@ -129,18 +158,15 @@ class JetA:
         viscosity = 0
         for key in JetA.mole_fractions_dict.keys():
             viscosity += viscosities[key] * JetA.mole_fractions_dict[key]
-        print(f"viscosity: {viscosity}")
         # to do later : add 'lucas' correction
         return viscosity
 
     # https://aiche.onlinelibrary.wiley.com/doi/epdf/10.1002/aic.690210313
     @staticmethod
     def get_saturation_temp(pressure):
-        pressure = 1.01325e5
         PR = pressure / JetA.p_crit # reduced pressure
         omega = JetA.get_acentric_factor()
         saturation_temp = sci.fsolve(func=JetA._saturation_temp_eqn, x0=[.1], args=(PR, omega))[0] * JetA.temp_crit
-        print(f"saturatiomn temp: {saturation_temp}")
         return saturation_temp
         
     # numerical solver should make this equal 0
@@ -150,24 +176,6 @@ class JetA:
         f1 = 15.2518 - 15.6875 / TR - 13.4721 * np.log(TR) + .43577 * TR**6
         return (f0 + omega * f1) - np.log(PR)
 
-    @staticmethod
-    def get_conductivity(temp):
-        # Conductivity
-        # Temperature in Celcius
-        # Cond_300K = 0.1150 W/mK, Cond_550K = 0.076 W/(m*K), Pg. 82
-        condSlope = (0.076-0.1150)/(550-300)
-
-        cond_c = condSlope * (temp - 300) + 0.1150 #W/(m*K)
-        # return cond_c
-        # something is possibly wrong with this, for now, use constant conductivity for water
-        return .6 # W/mK
-
-    @staticmethod
-    def get_kinematic_viscosity(temp):
-        # Kinematic viscosity
-        viscK_c =  1.7825 * (1700 * math.exp(-0.026*(temp)) + 0.27) / 1000000 # Done with eyeballed curve fit. Should be updated to use a more rigorous method
-        return viscK_c
-    
     # interpolates the table, represented as a dictionary of values
     @staticmethod
     def interpolate(dict, value):

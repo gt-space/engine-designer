@@ -66,7 +66,7 @@ adv_data = {"solve_bell": True, # Solve with a bell nozzle instead of a conical 
 
 ## CALL DESIGN SCRIPT ##
 preset_chamber_ID = preset_chamber_ID / 39.37 # inches to meters
-film_cooling_props = ["gas",.1, 4, .02, .9, 2e5, 295] # coolant_initial_state ("liquid" or "gas"), total_mdot_coolant, num_orifices, diameter_orifice, orifice_cstar, pressure_orifice, temp_orifice
+film_cooling_props = ["gas",.06, 15, .4, 1, 2e5, 295] # coolant_initial_state ("liquid" or "gas"), total_mdot_coolant, num_orifices, diameter_orifice, orifice_cd, pressure_orifice, temp_orifice
 engine = Engine(thrust, film_cooling_props, P_c, P_e, con_rat, L_star = L_star, MR = MR, adv_data = adv_data, cstar_eff = cstar_eff, numPTS = numPTS, fuel = fuel, ox = ox, preset_chamber_ID=preset_chamber_ID) # Create engine object given params
 engine.design_engine() # Call the design function
 

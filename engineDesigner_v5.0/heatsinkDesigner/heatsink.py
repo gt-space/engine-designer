@@ -115,7 +115,7 @@ class Heatsink:
     
     def iterate(self,t,z, film_cool_type, last_wall_temp,last_u_cool=None,gas_film_present=None):
         # Finds wall temperature and convective coeffcient by iterating Bartz correlation several times at each axial station for a given time in time_list
-        dz = (self.engine.engineProps[1,1]-self.engine.engineProps[0,1])*.3048 # feet to m
+        dz = (self.engine.engineProps[1,1]-self.engine.engineProps[0,1])
         T_hg = self.engine.engineProps[z,9] # approximate mainstream gas temp to be gas temp without film cooling
         u_cool = -np.inf
         heat_flux_wall = .0 # can update later to get more accurqate h_g for liquid film

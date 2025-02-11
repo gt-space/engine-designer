@@ -4,7 +4,7 @@ import sys
 sys.path.insert(0, '/Users/atand/OneDrive/Documents/Code stuff/engine-designer/engineDesigner_v5.0/regenDesigner')
 
 from contourDesigner.CEA_properties import ceaToSI
-from fuel_props import JetA
+from utils.fuel_props import JetA
 
 def bartz(engine, T_wg, i):
     # DUE TO BARTZ CORRELATION BEING DEVELOPED IN ENGLISH UNITS, VALUES
@@ -68,7 +68,7 @@ def hg_gas_film(engine, T_wg, T_hg, deltaQ, last_wall_temp, last_u_cool, M_wt, i
     # L is circumference (m)
     # This function is only applied when T_wg is not T_hg
 
-    print(f"T_wg: {T_wg}, T_hg: {T_hg}, last_u_cool: {last_u_cool}, M_wt: {M_wt}, dz: {dz}")
+    # print(f"T_wg: {T_wg}, T_hg: {T_hg}, last_u_cool: {last_u_cool}, M_wt: {M_wt}, dz: {dz}")
 
     X = i * dz # length downstream of coolant injection (m)
 
@@ -89,13 +89,12 @@ def hg_gas_film(engine, T_wg, T_hg, deltaQ, last_wall_temp, last_u_cool, M_wt, i
     #     deltaT_cool = 0
     # deltaK = deltaQ + cp_cool * deltaT_cool # deltaQ is net heat flux into coolant & the second term is heat flux to mainstream gases; this solves for change in specific kinetic energy of film
     deltaK = 0 # should fix the above later
-    u_cool = 2*np.sqrt(.5*last_u_cool**2+deltaK)
+    u_cool = np.sqrt(2*(.5*last_u_cool**2+deltaK))
 
     h_g = engine.film_cooling[-1][0].get_h_g(u_hg, u_cool, cp_cool, alpha_cool, i, X)
+    # print(f'hg: {h_g}, T_hg: {T_hg}, T_wg: {T_wg}, z: {i*dz}')
 
-    print(f"h_g: {h_g}")
-
-    return h_g, u_cool, T_hg > T_wg
+    return h_g, u_cool, T_hg > T_wg+5
 
 def hg_boiling_liquid_film(engine, T_wl, T_hg, heat_flux_wall, M_wt, i, dz):
     # T_wl assumed to be liquid coolant temperature at wall, T_hg is mainstream gas temperature
