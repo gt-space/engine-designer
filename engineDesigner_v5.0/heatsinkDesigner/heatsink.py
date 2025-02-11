@@ -1,11 +1,13 @@
 import numpy as np
+import scipy as sci
 from matplotlib import pyplot as plt
-
-import sys
 
 # Uncomment and modify the following sys.path.insert line with the path of your file if "ModuleNotFoundError: No module named '...'" exception is given:
 #sys.path.insert(0, '/Users/saakethramramoju/Library/CloudStorage/OneDrive-GeorgiaInstituteofTechnology/YSJP/Vespula Engine Dev/engine-designer-master/engineDesigner_v4.2')
 from regenDesigner.bartz import bartz
+from regenDesigner.bartz import hg_gas_film
+from regenDesigner.bartz import hg_boiling_liquid_film
+from utils.fuel_props import JetA
 
 class Heatsink:
     def __init__(self, engine, thickness, hotfire_time, chamber_inner_diameter, graphite_OD = 0.75, graphite_start_index = 130, graphite_end_index = 159, dt = 1.0, radial_subdivisions = 1000, T_initial = 298.15): #, axial_subdivisions = 10):
@@ -28,7 +30,8 @@ class Heatsink:
         self.thickness_array = (self.Ri - self.engine.engineProps[:, 0] * 39.3701) + self.thickness # in, indicates wall thickness at each axial station
         self.material_distribution = self.material()[0] # given the material assignment at each FDM analsyis point along the contour
         self.T_initial = T_initial # K
-        self.temps = np.full((int(np.ceil(hotfire_time/dt)) + 1, len(self.engine.engineProps[:, 1]), self.rad_sub + 2), self.T_initial) # K, startng temperature distribution
+        self.temps = np.full((int(np.ceil(hotfire_time/dt)) + 1, len(self.engine.engineProps[:, 1]), self.rad_sub + 2), self.T_initial) # K, starting temperature distribution
+        
         self.mat = self.material()[1]
         # self.axial_sub = axial_subdivisions # axial stations where thermal gradient is evaluated
 
@@ -104,20 +107,51 @@ class Heatsink:
             Ao[i, i-1] = 1
             Ao[i, i+1] = 1
         Ao[0, 1] = -1*phi
-        Ao[0, -1] = 0
+        Ao[0, -1] = 5
         Ao[-1, -3] = 1
         final_temps = np.matmul((np.linalg.inv(Ao)), Co)
         self.temps[t, z, :] = final_temps
         return init_temps, final_temps
 
     
-    def iterate(self, t, z):
+    def iterate(self,t,z, film_cool_type, last_wall_temp,last_u_cool=None,gas_film_present=None):
         # Finds wall temperature and convective coeffcient by iterating Bartz correlation several times at each axial station for a given time in time_list
-        final_temps = self.temps[t, z, :]
+        dz = (self.engine.engineProps[1,1]-self.engine.engineProps[0,1])
+        T_hg = self.engine.engineProps[z,9] # approximate mainstream gas temp to be gas temp without film cooling
+        u_cool = -np.inf
+        heat_flux_wall = .0 # can update later to get more accurqate h_g for liquid film
+        deltaQ = 0 # can update later to get more accurate u_cool values for gas film
+        print(f'z:{z},gas film present?: {gas_film_present}')
         for i in range(0, 10):
-            hg = bartz(self.engine, self.temps[t, z, 0], z)[0]
+            if film_cool_type == "liquid" and z * dz < self.engine.film_cooling[-1][2] and z > 5:
+                M_wt = self.engine.film_cooling[-1][1]
+                hg  = hg_boiling_liquid_film(self.engine, self.temps[t, z, 0], T_hg, heat_flux_wall, M_wt, z, dz)
+            elif film_cool_type == "gas" and gas_film_present and z > 5:
+                M_wt = self.engine.film_cooling[-1][1]
+                hg, u_cool, gas_film_present = hg_gas_film(self.engine, self.temps[t, z, 0],T_hg, deltaQ, last_wall_temp, last_u_cool, M_wt, z, dz)
+            else:
+                hg = bartz(self.engine, self.temps[t, z, 0], z)[0]
             _, final_temps = self.transient(hg, t, z)
             self.temps[t, z, :] = final_temps
+        return hg, final_temps[0], u_cool, gas_film_present
+    
+    def transient_solution(self):
+        # Iterates along every axial station and time in time_list to find overall temperature history at each axial station along the wall thickness
+        hg_list = []
+        last_wall_temp = 298.15 # (K)
+        if len(self.engine.film_cooling) > 0:
+            last_u_cool = self.engine.film_cooling[-1][-1]
+            film_cool_type = self.engine.film_cooling[0]
+        else:
+            last_u_cool = -np.inf
+            film_cool_type = None
+        gas_film_present = True # if engine is film cooled with gas, the coolant is separate from mainstream flow at the injector
+        for z in range(len(self.temps[0, :, 0])):
+            for t in range(1, len(self.temps[:, 0, 0])):
+                hg, last_wall_temp, last_u_cool, gas_film_present = self.iterate(t,z,film_cool_type=film_cool_type,last_wall_temp=last_wall_temp,last_u_cool=last_u_cool, gas_film_present=gas_film_present)
+            hg_list.append(hg)
+        if len(self.engine.film_cooling) > 0: # and not gas_film_present:
+            self.engine = self.engine.film_cooling[-2] # replace Engine with updated MR Engine if homogeneous temp. is reached
         return hg, final_temps
 
     def transient_solution(self):

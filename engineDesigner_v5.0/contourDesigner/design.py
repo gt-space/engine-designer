@@ -47,16 +47,20 @@ import matplotlib.pyplot as plt
 from rocketcea.cea_obj import CEA_Obj
 from contourDesigner.contour import get_contour
 from contourDesigner.CEA_properties import get_props
+from contourDesigner.CEA_properties import ceaToSI
 from contourDesigner.constants import Constants
+from heatsinkDesigner.liquid_film_cooling import liquid_film_cooling
+from heatsinkDesigner.gas_film_cooling import gas_film_cooling
 
 np.set_printoptions(threshold=sys.maxsize) # Print setting for debugging arrays
 
 ## DEFINE ENGINE CLASS ##
 class Engine:
     # Upon declaration of a new engine:
-    def __init__(self, thrust, P_inj, P_e, con_rat, adv_data, MR=2, wall_MR = 2, L_star=1.05, cstar_eff = 1, numPTS = 200, fuel="JetA",ox="LOX",preset_chamber_ID=[]):
+    def __init__(self, thrust, film_cooling, P_inj, P_e, con_rat, adv_data, MR=2, wall_MR = 2, L_star=1.05, cstar_eff = 1, numPTS = 200, fuel="JetA",ox="LOX",preset_chamber_ID=[]):
         self.noz_correction = []
         self.thrust = thrust # thrust: Design thrust [N]
+        self.film_cooling = film_cooling  # if no film cooling, this is empty; otherwise it is [total_mdot_coolant, num_orifices, diameter_orifice, cd_orifice, pressure_orifice, temp_orifice]
         self.P_inj = P_inj # P_inj: Injector face pressure [bar]
         self.P_e = P_e # P_e: Exit pressure [bar]
         self.con_rat = con_rat # con_rat: Enigne contraciton ratio
@@ -134,6 +138,47 @@ class Engine:
         # See CEA_properties.py for details
         self.engineProps = get_props(chBarrel, nozzleContour, self.throatInd, ispObj, self.P_inj_psi, self.MR, self.A_t)
         self.wallProps = get_props(chBarrel, nozzleContour, self.throatInd, ispObj, self.P_inj_psi, self.wall_MR, self.A_t)
+        
+        # Update engine properties for film cooling
+        # Other external methods then iteratively find gas-side heat transfer coefficient and adiabatic wall temperatures along the film length.
+        # Either liquid_film_cooling.py or gas_film_cooling.py is used, depending on the state of the coolant when it enters the chamber (or very soon after).
+        # The calculated values for h_g and T_aw are used directly in heatsink.py to generate the transient along the film length.
+        # The transient for thes rest of the engine is found using Bartz as usual, and is modelled as an engine with a modified MR
+        if len(self.film_cooling) > 0:
+            coolant_initial_state, mdot_c, num_orifices, diameter_orifice, cd_orifice, pressure_orifice, temp_orifice = self.film_cooling
+            new_MR = (self.mDot_tot*self.MR)/(self.mDot_tot*(1-self.MR)+mdot_c) # new mixture ratio for coolant ; this does not update the field MR ; incorporate this later
+            pressure_cc = self.engineProps[5,8]*10**5 # bars to Pa
+            dz = (self.engineProps[1,1]-self.engineProps[0,1])
+
+            if coolant_initial_state == "liquid":
+                # cea_obj, mdot_gas0, MR, d_chamber, eps,
+                # mdot_cool, pressure_orifice_cool, temp_orifice_cool, d_film_orifice, num_film_orifices, cd_orifice
+                film_cool = liquid_film_cooling(ispObj, self.mDot_tot, self.MR, self.P_inj*10**5, chBarrel[0, 0]*2, exp_rat, \
+                    mdot_c, pressure_orifice, temp_orifice,pressure_cc, diameter_orifice, num_orifices, cd_orifice)
+                film_length = film_cool.get_film_cooled_length()
+                # film_temp_guess = np.linspace(temp_orifice, JetA.get_saturation_temp(pressure_cc), np.floor(film_length)/dz)
+                film_props = [film_cool, MW_t/1000, film_length]
+            else:
+                # beta and S can be modified being on coolant slot geometry, see gas_film_cooling.py
+                beta = .25*np.pi
+                S = .045*2.54/100 # m
+                print(f'visc: {ceaToSI(self.engineProps[20,17],"viscosity")}')
+                pressure_inj = self.engineProps[0,8]*10**5 # bars to Pascals
+                rho_comb_gases = ceaToSI(ispObj.get_Chamber_Density(self.P_inj_psi, self.MR, exp_rat), "density")
+                radii = self.engineProps[:, 0] # ft to m
+                # num_orifices,cd_orifice,orifice_d,
+                film_cool = gas_film_cooling(beta, S, mdot_c, self.mDot_tot,num_orifices,cd_orifice,diameter_orifice, pressure_inj, rho_comb_gases, pressure_cc, temp_orifice, self.engineProps[0,9],radii, dz)
+                film_cool.get_target_mdot_cool()
+                mweh
+                u_inj_cool = film_cool.get_u_inj_cool()
+                film_props = [film_cool, MW_t/1000, u_inj_cool]
+                film_cool.get_target_mdot_cool(self.engineProps[10,9])
+
+            # create identical Engine object, but with modified MR ; to be used to calculate properties after homogenous temp. is reached
+            new_engine = Engine(self.thrust, [], self.P_inj, self.P_e, con_rat, L_star = self.L_star, MR = new_MR, adv_data = self.adv_data, cstar_eff = self.cstar_eff, numPTS = self.numPTS, fuel = self.fuel, ox = self.ox, preset_chamber_ID=self.preset_chamber_ID)
+
+            self.film_cooling.append(new_engine)
+            self.film_cooling.append(film_props)
 
         # Check for bad design (This occurs when thrust is way higher than chamber pressure should be and barrel becomes negative)
         if chBarrel[1,1] < 0:

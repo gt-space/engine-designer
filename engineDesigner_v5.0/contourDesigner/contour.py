@@ -35,7 +35,6 @@ def get_contour(R_t, con_rat, exp_rat, L_star, adv_data, numPTS):
     chamberArea = con_rat * throatArea
     chamberRad = math.sqrt(con_rat) * R_t
 
-
     # ==== Nozzle Critical Points ====
     #     - 0: Chamber Start, Injector Plane
     #     - 1: Converging radius start
@@ -117,6 +116,7 @@ def get_contour(R_t, con_rat, exp_rat, L_star, adv_data, numPTS):
 
     # ==== Size Combustion Chamber ====
     chamberVolume = throatArea * L_star
+    print(f'chamber volume: {chamberVolume}')
     # Solve for convergent volume:
     convergingVolume = 0
     nozzleZ = np.append(nozzleZ, z4) # Add the throat position to the Z points
