@@ -112,6 +112,7 @@ class Heatsink:
         final_temps = np.matmul((np.linalg.inv(Ao)), Co)
         self.temps[t, z, :] = final_temps
         return init_temps, final_temps
+
     
     def iterate(self,t,z, film_cool_type, last_wall_temp,last_u_cool=None,gas_film_present=None):
         # Finds wall temperature and convective coeffcient by iterating Bartz correlation several times at each axial station for a given time in time_list
@@ -151,9 +152,16 @@ class Heatsink:
             hg_list.append(hg)
         if len(self.engine.film_cooling) > 0: # and not gas_film_present:
             self.engine = self.engine.film_cooling[-2] # replace Engine with updated MR Engine if homogeneous temp. is reached
+        return hg, final_temps
+
+    def transient_solution(self):
+        # Iterates along every axial station and time in time_list to find overall temperature history at each axial station along the wall thickness
+        hg_list = np.zeros((len(self.time_list), len(self.engine.engineProps[:, 1])))
+        for z in range(len(self.engine.engineProps[:, 1])):
+            for t in range(1, len(self.time_list)):
+                hg, _ = self.iterate(t, z)
+                hg_list[t, z] = hg
         return self.temps, hg_list
-    # temps: full wall temperature history (3d array)
-    # hg_list: list of convective coefficients at all axial stations
     
     def closest(self, time):
         # Finds the closest time in time_list to the given time
@@ -184,7 +192,7 @@ class Heatsink:
         T = np.polyval(p, r)
         hg = hg_list[z]
         return a, b, hg, r, T,
-    
+
     def plot_wall_temp_gradient_at_station(self, time, z):
         # Plots wall temperature gradient along thickness at a given axial station and time
         _, _, _, r, T = self.wall_temp_2d(time, z)
@@ -313,3 +321,15 @@ class Heatsink:
         v = inner_mat.v
         von_mises = np.abs((cte*E/(1-v)) * (T_av - T_inner)) # hoop is same axial stress at inner wall, radial thermal stress is zero
         return T_av'''
+
+
+'''   def transient_solution(self):
+        # Iterates along every axial station and time in time_list to find overall temperature history at each axial station along the wall thickness
+        hg_list = []
+        for z in range(len(self.temps[0, :, 0])):
+            for t in range(1, len(self.temps[:, 0, 0])):
+                hg, _ = self.iterate(t, z)
+            hg_list.append(hg)
+        return self.temps, hg_list
+    # temps: full wall temperature history (3d array)
+    # hg_list: list of convective coefficients at all axial stations'''
