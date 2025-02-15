@@ -169,7 +169,6 @@ class Engine:
                 # num_orifices,cd_orifice,orifice_d,
                 film_cool = gas_film_cooling(beta, S, mdot_c, self.mDot_tot,num_orifices,cd_orifice,diameter_orifice, pressure_inj, rho_comb_gases, pressure_cc, temp_orifice, self.engineProps[0,9],radii, dz)
                 film_cool.get_target_mdot_cool()
-                mweh
                 u_inj_cool = film_cool.get_u_inj_cool()
                 film_props = [film_cool, MW_t/1000, u_inj_cool]
                 film_cool.get_target_mdot_cool(self.engineProps[10,9])
