@@ -63,7 +63,7 @@ class Engine:
         self.film_cooling = film_cooling  # if no film cooling, this is empty; otherwise it is [total_mdot_coolant, num_orifices, diameter_orifice, cd_orifice, pressure_orifice, temp_orifice]
         self.P_inj = P_inj # P_inj: Injector face pressure [bar]
         self.P_e = P_e # P_e: Exit pressure [bar]
-        self.con_rat = con_rat # con_rat: Enigne contraciton ratio
+        self.con_rat = con_rat # con_rat: Engine contraciton ratio
         self.adv_data = adv_data # Geometric params for bell nozzle {dict}
         self.MR = MR # Core mixture ratio by weight (ox/fuel)
         self.wall_MR = wall_MR # Mixture ratio near wall by weight (ox/fuel)
@@ -169,7 +169,6 @@ class Engine:
                 # num_orifices,cd_orifice,orifice_d,
                 film_cool = gas_film_cooling(beta, S, mdot_c, self.mDot_tot,num_orifices,cd_orifice,diameter_orifice, pressure_inj, rho_comb_gases, pressure_cc, temp_orifice, self.engineProps[0,9],radii, dz)
                 film_cool.get_target_mdot_cool()
-                mweh
                 u_inj_cool = film_cool.get_u_inj_cool()
                 film_props = [film_cool, MW_t/1000, u_inj_cool]
                 film_cool.get_target_mdot_cool(self.engineProps[10,9])

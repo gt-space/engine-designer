@@ -120,7 +120,6 @@ class Heatsink:
         u_cool = -np.inf
         heat_flux_wall = .0 # can update later to get more accurqate h_g for liquid film
         deltaQ = 0 # can update later to get more accurate u_cool values for gas film
-        print(f'z:{z},gas film present?: {gas_film_present}')
         for i in range(0, 10):
             if film_cool_type == "liquid" and z * dz < self.engine.film_cooling[-1][2] and z > 5:
                 M_wt = self.engine.film_cooling[-1][1]
@@ -146,6 +145,7 @@ class Heatsink:
             film_cool_type = None
         gas_film_present = True # if engine is film cooled with gas, the coolant is separate from mainstream flow at the injector
         for z in range(len(self.temps[0, :, 0])):
+            print(f'current z: {z}, final z: {len(self.temps[0, :, 0])-1}')
             for t in range(1, len(self.temps[:, 0, 0])):
                 hg, last_wall_temp, last_u_cool, gas_film_present = self.iterate(t,z,film_cool_type=film_cool_type,last_wall_temp=last_wall_temp,last_u_cool=last_u_cool, gas_film_present=gas_film_present)
             hg_list.append(hg)
@@ -198,7 +198,7 @@ class Heatsink:
     
     def plot_inner_wall_temp_at_time(self, time): 
         # Plots inner wall temperature at a given time along entire contour
-        self.transient_solution()
+        # self.transient_solution()
         t = self.closest(time)
         plt.figure()
         plt.plot(self.engine.engineProps[:, 1] * 39.37, self.temps[t, :, 0])
@@ -208,7 +208,7 @@ class Heatsink:
     
     def plot_transient_3d(self):
         # Plots transient temperature distribution along entire contour
-        self.transient_solution()
+        # self.transient_solution()
         t,Z = np.meshgrid(self.time_list[1:-1], self.engine.engineProps[:, 1] * 39.37)
         plt.figure()
         ax_ch = plt.axes(projection='3d')

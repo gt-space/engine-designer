@@ -1,0 +1,15 @@
+phases:
+- name: liquid_oxygen
+  thermo: ideal-gas
+  elements: [O]
+  species: [O2(L)]
+
+species:
+- name: O2(L)
+  composition: {O: 2}
+  thermo:
+    model: constant-cp
+    T0: 90.170
+    h0: -12979.0 J/mol
+    s0: 0.0
+    cp0: 0.0

@@ -147,7 +147,7 @@ def get_contour(R_t, con_rat, exp_rat, L_star, adv_data, numPTS):
     throatInd_engprops=throatInd+numPTS
     chBarrel_endInd = numPTS
 
-    #throat index is definied from the start of the nozzle contour (converging + diverging)
+    #throat index is defined from the start of the nozzle contour (converging + diverging)
     #when concatenated to the chamber section, you must add the numPts to get the throat ind
     #or just use self.nozzlecontour(throatind)
     # Plot the Contour if you want (can also easily be done in main.py):

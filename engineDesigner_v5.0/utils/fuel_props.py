@@ -60,7 +60,7 @@ class JetA:
         term2 = (5.524*np.exp(-2.5*T_r))*p_r
         term3 = (.044*T_r**2-.164*T_r+1.15)
         Z = term1 - term2 + term3
-        if Z < .8 or Z > 1.2:
+        if Z < .8 or Z > 1.2: # sanity check
             Z = 1
         return Z
 

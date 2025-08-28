@@ -52,7 +52,7 @@ def bartz(engine, T_wg, i):
     aC = (P_c/C_star)**0.8
     aD = ((2 * R_t)/R_tCurve)**0.1
     aE = ((R_t**2)/(contourR**2))**0.9
-    h_g = (aA * aB * aC * aD) * aE * sigma * 0.5 #Convection coefficient with soot knockdown
+    h_g = (aA * aB * aC * aD) * aE * sigma * 0.75 #Convection coefficient with soot knockdown
     q_conv = h_g * (T_aw - T_wg) #Heat flux (heat per area)
 
     # Adiabtic wall temp T_aw is temp if the wall was adiabatic (no heat transfer

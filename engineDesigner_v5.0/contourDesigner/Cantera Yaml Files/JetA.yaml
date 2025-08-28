@@ -1,0 +1,17 @@
+# https://ntrs.nasa.gov/citations/20020085330, page 287 (of the PDF itself)
+
+phases:
+- name: jet_a
+  thermo: ideal-gas
+  elements: [C, H]
+  species: [C12H23(L)]
+
+species:
+- name: C12H23(L)
+  composition: {C: 12, H: 23}
+  thermo:
+    model: constant-cp
+    T0: 278.15
+    h0: -249657 J/mol
+    s0: 0.0
+    cp0: 0.0

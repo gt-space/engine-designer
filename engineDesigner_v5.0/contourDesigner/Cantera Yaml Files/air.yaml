@@ -1,0 +1,108 @@
+description: |-
+  This file contains data for gas phase species from the NASA thermodynamic
+  database, which is available for download from
+  https://shepherd.caltech.edu/EDL/PublicResources/sdt/thermo.html.
+  The original source is:
+
+  B.J. McBride, S. Gordon, and M.A. Reno, "Coefficients for Calculating
+  Thermodynamic and Transport Properties of Individual Species", NASA
+  Report TM-4513, October 1993. https://ntrs.nasa.gov/citations/19940013151
+
+  The 'note' field for each species indicates the source and date for the data used
+  to generate the polynomial fits, as given by McBride et al. The abbreviations and
+  corresponding references are given in the report.
+
+generator: ck2yaml
+input-files: [nasa_gas.dat]
+cantera-version: 2.6.0
+date: Wed, 20 Apr 2022 22:21:10 -0400
+
+
+
+units: {length: cm, time: s, quantity: mol, activation-energy: cal/mol}
+
+phases:
+- name: air
+  thermo: ideal-gas
+  elements: [Ar, C, O, H, N]
+  species: [Ar, CO2, H2O, O2, N2]
+  transport: mixture-averaged
+
+species:
+- name: Ar
+  composition: {Ar: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 6000.0]
+    data:
+    - [2.5, 0.0, 0.0, 0.0, 0.0, -745.375, 4.37967491]
+    note: L 6/88
+  transport:
+    model: gas
+    geometry: atom
+    diameter: 3.3
+    well-depth: 120
+- name: H2O
+  composition: {H: 2, O: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [4.19864056, -2.0364341e-03, 6.52040211e-06, -5.48797062e-09, 1.77197817e-12,
+      -3.02937267e+04, -0.849032208]
+    - [2.67703787, 2.97318329e-03, -7.7376969e-07, 9.44336689e-11, -4.26900959e-15,
+      -2.98858938e+04, 6.88255571]
+    note: L 8/89
+  transport:
+    model: gas
+    geometry: linear
+    well-depth: 78.02 # TIP4P H2O
+    diameter: 3.154 # TIP4P H2O
+- name: O2
+  composition: {O: 2}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [3.78245636, -2.99673415e-03, 9.847302e-06, -9.68129508e-09, 3.24372836e-12,
+      -1063.94356, 3.65767573]
+    - [3.66096083, 6.56365523e-04, -1.41149485e-07, 2.05797658e-11, -1.29913248e-15,
+      -1215.97725, 3.41536184]
+    note: TPIS89
+  transport:
+    model: gas
+    geometry: linear
+    well-depth: 122.8
+    diameter: 3.382
+- name: CO2
+  composition: {C: 1, O: 2}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [2.35677352, 8.98459677e-03, -7.12356269e-06, 2.45919022e-09, -1.43699548e-13,
+      -4.83719697e+04, 9.90105222]
+    - [4.63659493, 2.74131991e-03, -9.95828531e-07, 1.60373011e-10, -9.16103468e-15,
+      -4.90249341e+04, -1.93534855]
+    note: L 7/88
+  transport:
+    model: gas
+    geometry: linear
+    well-depth: 241.7
+    diameter: 3.673
+- name: N2
+  composition: {N: 2}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [3.53100528, -1.23660987e-04, -5.02999437e-07, 2.43530612e-09, -1.40881235e-12,
+      -1046.97628, 2.96747468]
+    - [2.95257626, 1.39690057e-03, -4.92631691e-07, 7.86010367e-11, -4.60755321e-15,
+      -923.948645, 5.87189252]
+    note: TPIS78
+  transport:
+    model: gas
+    geometry: linear
+    well-depth: 100.2
+    diameter: 3.613

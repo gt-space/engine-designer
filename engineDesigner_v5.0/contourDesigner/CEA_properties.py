@@ -72,6 +72,9 @@ def get_props(chBarrel, nozzleContour, throatInd, ispObj, P_inj_psi, MR, A_t, cs
     numPTS = len(chBarrel)
     # full CEA output (used when other CEA methods are not available to gather specific data)
     output = ispObj.get_full_cea_output(P_inj_psi, MR, short_output=1, output="siunits")
+    print(output)
+    error
+
     #print(output)
     # Define chamber props
     chamberProps = chBarrel
