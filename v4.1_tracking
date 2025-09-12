@@ -1,0 +1,48 @@
+~/main.py
+## GENERAL INPUT PARAMETERS ##
+thrust = 2500 lbf
+P_c = 290 psi
+P_e = 10 psi
+con_rat = 4 (TBR)
+L_star = 1.05 m
+MR_design = 2
+cstar_eff = 0.9 (TBR, NEEDS PROPER IMPLEMENTATION SEE SECTION R1)
+numPTS = 250
+
+## ADVANCED INPUT PARAMETERS ##
+
+## REGEN PARAMETERS ##
+
+~/contourDesigner/design.py
+
+~/regenDesigner/bartz.py
+recovery factor = 1
+0.6 factor on h_gs
+cstar_eff^2 factor on T_aw
+
+
+
+
+
+
+
+
+#### R1 ####
+What does c* efficiency effect?
+-lower adiabatic flame temp from less heat release (important!)
+-different composition from temperature and remaining products (maybe important?)
+
+-line 99, knock down for the exit velocity by c* eff factor in design.py
+-+line 110, knock down temp for the throat (nixed this maybe implement) in design.py
+
+
+
+#### R2 ####
+
+What does soot knockdown effect
+-lower heat transfer rate from bartz (x0.4 to x0.6)
+-higher radiative heating (unknown influence)
+
+
+
+
