@@ -1,17 +1,20 @@
 import cantera as ct
+import copy
 import numpy as np
 import scipy.optimize as sci
 
 class CanteraProperties:
 
-    def __init__(self,P_inj,P_amb,con_rat, LOX_inj_temp, JetA_inj_temp,gas_init_temp,MR_weight,max_iters_throat=1_000,max_iters_per_loc=100):
+    def __init__(self,mdot_kerosene, mdot_LOX, P_inj,P_amb,con_rat, LOX_inj_temp, JetA_inj_temp,gas_init_temp,MR_weight,max_iters_throat=1_000,max_iters_per_loc=100,injection_speed=20):
 
         self.P_inj = P_inj
         self.P_amb = P_amb
+        self.mdot_tot = mdot_kerosene+mdot_LOX
         self.con_rat = con_rat
         self.MR = MR_weight * 166 / 32 # ratio of moles
         self.max_iters_throat = max_iters_throat
         self.max_iters_per_loc = max_iters_per_loc
+        self.injection_speed = injection_speed
 
         self.contour_defined = False
 
@@ -36,33 +39,49 @@ class CanteraProperties:
         self.thermal_conductivity = None
         self.prandtl_arr = None
         self.velocity_arr = None
+        
+        simpler_model = False
+        if simpler_model:
+              # extract all species in the NASA database
+            full_species = {S.name: S for S in ct.Species.list_from_file('nasa_gas.yaml')}
 
-        # extract all species in the NASA database
-        full_species = {S.name: S for S in ct.Species.list_from_file('nasa_gas.yaml')}
-
-        LOX = ct.Solution('Cantera YAML Files/LOX.yaml','liquid_oxygen')
-        JetA = ct.Solution('Cantera YAML Files/JetA.yaml','jet_a')
-
-        # LOX = ct.Solution(thermo='ideal-gas',species=[full_species['O2']])
-        # JetA = ct.Solution(thermo='ideal-gas',species=[full_species['Jet-A(g)']])
-
-        # extract only the relevant species
-        species = [full_species[S] for S in (
-            'CH4', 'CO', 'CO2', 'C2H4', 'H2', 'H2O', 'C'
+            # extract only the relevant species
+            species = [full_species[S] for S in (
+                'CH4', 'CO', 'CO2', 'C2H4', 'H2', 'H2O', 'C'
+                )]
+            # only the equilibrium species
+            species = [full_species[S] for S in (
+                'CH4', 'CO', 'CO2', 'C2H4', 'H2', 'H2O'
             )]
-        
-       
-        # only the equilibrium species
-        # species = [full_species[S] for S in (
-        #     'CH4', 'CO', 'CO2', 'C2H4', 'H2', 'H2O'
-        # )]
-        self.gas = ct.Solution(thermo='ideal-gas', species=species)
-        # spec = ct.Species.list_from_file("Cantera YAML Files/CombProducts.yaml")
-        # self.gas = ct.Solution(thermo='ideal-gas', kinetics='gas',species=spec)
+            spec = ct.Species.list_from_file("CombProducts.yaml")
+            self.gas = ct.Solution(thermo='ideal-gas', kinetics='gas',species=spec)
+            self.throat = ct.Solution(thermo='ideal-gas', kinetics='gas',species=spec)
 
-        # self.gas = ct.Solution('Cantera YAML Files/CombProducts.yaml')
-        self.mixture = ct.Mixture([(LOX,self.MR/(1+self.MR)),(JetA,1/(1+self.MR)),(self.gas,1e-5)]) # does quantity matter?
+            LOX = ct.Solution(thermo='ideal-gas',species=[full_species['O2']])
+            JetA = ct.Solution(thermo='ideal-gas',species=[full_species['Jet-A(g)']])
+
+        else:
+            all_species = {S.name: S for S in ct.Species.list_from_file('CombProducts.yaml',section='species')}
+            self.JetA_X = {
+                "C10H22(N)":  0.85,   # n-decane
+                "C3H8":     0.15    # propane
+            }
+            LOX = ct.Solution(thermo='ideal-gas',species=[all_species['O2']])
+            JetA = ct.Solution(thermo='ideal-gas',species=[all_species[S] for S in self.JetA_X])
+            self.gas = ct.Solution(thermo='ideal-gas',kinetics='gas',transport_model='mixture-averaged',species=list(all_species.values()))
+            self.throat = ct.Solution(thermo='ideal-gas',kinetics='gas',transport_model='mixture-averaged',species=list(all_species.values()))
+            reactions = ct.Reaction.list_from_file('CombProducts.yaml',self.gas)
+            for reaction in reactions:
+                self.gas.add_reaction(reaction)
+                self.throat.add_reaction(reaction)
+            chamber_X_dict = {S: 0 for S in all_species}
+            chamber_X_dict['O2'] = self.MR/(1+self.MR)
+            for spec_name in self.JetA_X:
+                chamber_X_dict[spec_name] = self.JetA_X[spec_name]/(1+self.MR)
+            self.gas.X = chamber_X_dict
         
+        self.mixture = ct.Mixture([(LOX,self.MR/(1+self.MR)),(JetA,1/(1+self.MR)),(self.gas,1e-5)]) # does quantity matter?
+            
         # https://rocketcea.readthedocs.io/en/latest/finite_area_comb.html
         self.Pc = P_inj/(1+.54/(con_rat**2.2))
 
@@ -70,29 +89,38 @@ class CanteraProperties:
 
         # Find throat properties
         self.h_chamber, self.chamber_gamma, self.chamber_entropy = self.get_chamber_props(chamber_pressure, LOX, JetA, LOX_inj_temp,JetA_inj_temp,P_inj,P_inj,gas_init_temp)
+        print(f'pc: {self.Pc:.2E} and P: {self.gas.P:.2E}')
+        breakpoint()
         self.throat_pressure, self.throat_MWt, self.throat_gamma = self.get_throat_props(chamber_pressure, self.h_chamber)
 
         # set expansion ratio
         k = self.throat_gamma # assume "frozen" at throat for expansion ratio calculation (reaction stops at the throat)
-        self.exit_Mach = np.sqrt((2/(k-1))*(Pc/P_amb)^((k-1)/k)-1)
-        self.exp_rat  (1/self.exit_Mach)*((1+(k+1)/2*self.exit_Mach^2)/((k+1)/2))^((k+1)/(2*(k-1)))
+        self.exit_Mach = np.sqrt((2/(k-1))*(self.Pc/P_amb)**((k-1)/k)-1)
+        self.exp_rat = (1/self.exit_Mach)*((1+(k+1)/2*self.exit_Mach**2)/((k+1)/2))**((k+1)/(2*(k-1)))
 
-    def get_Throat_PcOvPe(self):
+       
+    @property
+    def throat_PcOvPe(self):
         return self.throat_pressure / self.P_amb
 
-    def get_eps(self):
+    @property
+    def eps(self):
         return self.exp_rat
 
-    def get_exit_Mach(self):
+   # @property
+    def exit_Mach(self):
         return self.exit_Mach
 
-    def get_throat_MWt(self):
+   # @property
+    def throat_MWt(self):
         return self.throat_MWt
 
-    def get_throat_gamma(self):
+  #  @property
+    def throat_gamma(self):
         return self.throat_gamma
 
-    def get_contour_defined(self):
+ #   @property
+    def contour_defined(self):
         return self.contour_defined
     
     '''
@@ -104,27 +132,36 @@ class CanteraProperties:
     # Takes a numpy array of radii at each axial location
     def set_contour(self,contour):
         self.area_arr = .5 * np.pi * contour**2
-        self.throat_area = np.min(self.area_arr)
-        self.set_props()
+        self.chamber_area = self.area_arr[0]
+        i = 0
+        while (self.area_arr[i] - self.chamber_area)/self.chamber_area<1e-4:
+            i += 1
+        self.chamber_end_ind = i -1
+        i = 0
+        while i < len(self.area_arr - 1) and self.area_arr[i] >= self.area_arr[i-1]:
+            i += 1
+        self.throat_ind = i
+        self.throat_area = self.area_arr[self.throat_ind]
+        self._set_props()
         self.contour_defined = True
 
     # Sets properties throughout engine (called internally from set_contour)
-    def set_props(self):
-        self.pressure_arr = np.array()
-        self.temp_arr = np.array()
-        self.rho_arr = np.array()
-        self.ivac_arr = np.array()
-        self.cf_arr = np.array()
-        self.isp_arr = np.array()
-        self.h_arr = np.array()
-        self.e_arr = np.array()
-        self.molar_weight_arr = np.array()
-        self.cp_arr = np.array()
-        self.gamma_arr = np.array()
-        self.sound_speed_arr = np.array()
-        self.viscosity_arr = np.array()
-        self.thermal_conductivity_arr = np.array()
-        self.prandtl_arr = np.array()
+    def _set_props(self):
+        self.pressure_arr = []
+        self.temp_arr = []
+        self.rho_arr = []
+        self.ivac_arr = []
+        self.cf_arr = []
+        self.isp_arr = []
+        self.h_arr = []
+        self.e_arr = []
+        self.molar_weight_arr = []
+        self.cp_arr = []
+        self.gamma_arr = []
+        self.sound_speed_arr = []
+        self.viscosity_arr = []
+        self.thermal_conductivity_arr = []
+        self.prandtl_arr = []
 
         '''
         Functions for determining ivac (specific impulse in vaccum), cf (thrust coefficient), isp (specific impulse),
@@ -149,7 +186,7 @@ class CanteraProperties:
 
         # def compute_prandtl():
 
-        for i in range(np.size(self.area_arr)):
+        for i in range(self.chamber_end_ind+1, np.size(self.area_arr)):
             mixture = self.mixture
             gas = self.gas
             pressure, gamma, cp = self.get_SP_gamma_cp(self.area_arr[i])
@@ -164,47 +201,61 @@ class CanteraProperties:
             self.pressure_arr.append(pressure)
             self.temp_arr.append(gas.T)
             self.rho_arr.append(gas.density_mass)
-            self.ivac_arr.append(compute_ivac(Isp,gas.T,gas.gas_constant,gas.mean_molecular_weight))
+            self.ivac_arr.append(compute_ivac(Isp,gas.T,ct.gas_constant,gas.mean_molecular_weight))
             self.cf_arr.append(Isp / compute_cstar(gamma,gas.T,gas.mean_molecular_weight/1000))
             self.isp_arr.append(Isp)
             self.h_arr.append(gas.enthalpy_mass)
             self.e_arr.append(gas.int_energy_mass)
-            self.molar_weight_arr.append(gas.mean_molecular_weight) / 1000 # kg/kmol to kg/mol
+            self.molar_weight_arr.append(gas.mean_molecular_weight/1000) # kg/kmol to kg/mol
             self.cp_arr.append(cp)
             self.gamma_arr.append(gamma)
             self.sound_speed_arr.append(gas.sound_speed)
             self.viscosity_arr.append(0) # TBD
             self.thermal_conductivity_arr.append(0) # TBD
-            self.prandtal_arr.append(0) # TBD
+            self.prandtl_arr.append(0) # TBD
 
         self.velocity_arr = self.Mach_arr * self.sound_speed_arr
+
+        """"
+        note to self - this does not work because it is trying to use constant entropy to get enthalpy,
+        but because of the model i'm using, constant enthalpy means constant temp means constant enthalpy,
+        so KE=delta enthalpy remains constant, so speed is constant, so this whole thing is messed up
+
+        we really only have 2 degrees of freedom for p, rho, T, enthalpy, and entropy because we're making ideal
+        and thermally perfect gas assumptions. so i need to redo how this works. but the throat does converge.
+        
+        """
     
     def get_SP_gamma_cp(self,area):
-        Ae_ov_At = area / self.throat_area
+        Ae_ov_At = 3 # area / self.throat_area
+        A_Mdot_thr = self.throat.T / (self.throat.P*self.throat.sound_speed*self.throat.mean_molecular_weight)
+        print(f'rat: {Ae_ov_At}, Pc: {self.Pc:.2E}, P: {self.gas.P:.2E}, enth chamber: {self.h_chamber:.2E}')
 
         def iterate(pressure,pinf_pe):
             self.gas.SP = self.chamber_entropy,pressure
-            self.mixture.equilibrate('SP')
-            self.gas()
+            self.gas.equilibrate('SP')
 
             gamma, cp = CanteraProperties._compute_gamma_cp(self.gas)
+            speed = np.sqrt(2 * (self.h_chamber - self.gas.enthalpy_mass))
+            print(f'speed: {speed}')
+            speed_sound = np.sqrt(gamma*ct.gas_constant*self.gas.T/self.gas.mean_molecular_weight)
 
-            speed = np.sqrt(2 * (self.h_chamber - cp))
-            speed_sound = self.gas.sound_speed
-
-            Ae_ov_At_est = self.gas.T / (self.gas.P * speed * self.gas.mean_molecular_weight) / self.mdot_tot
+            Ae_ov_At_est = self.gas.T / (self.gas.P * speed * self.gas.mean_molecular_weight) / A_Mdot_thr
             dlogp_dlogA = gamma * speed**2 / (speed**2 - speed_sound**2)
             residual = dlogp_dlogA * (np.log(Ae_ov_At) - np.log(Ae_ov_At_est))
-            log_pinf_pe = np.log(pinf_pe/pressure) + residual
+            log_pinf_pe = np.log(pinf_pe) + residual
 
             next_pinf_pe = np.exp(log_pinf_pe)
-            next_pressure = pinf_pe / next_pinf_pe
+            next_pressure = self.Pc / next_pinf_pe
+
+            print(f'res: {residual}, next p: {next_pressure:.2E}')
     
             return abs(residual) < 4e-5, next_pressure, next_pinf_pe, gamma, cp
         
         converged = False
-        pinf_pe = np.exp(self.gamma_throat + 1.4 * np.log(Ae_ov_At))
-        pressure = self.chamber_pressure / pinf_pe
+        p_inf_pe = np.exp(self.throat_gamma + 1.4 * np.log(Ae_ov_At))
+        pressure = self.Pc / p_inf_pe # self.Pc / p_inf_pe
+        print(f'pressure: {pressure}')
         i = 0
         while not converged and i < self.max_iters_per_loc:
             converged, pressure, p_inf_pe, gamma, cp = iterate(pressure,p_inf_pe)
@@ -327,13 +378,13 @@ class CanteraProperties:
         print(f'gas init temp: {gas_init_temp}')
 
         self.gas.TP = gas_init_temp, chamber_pressure
-        self.gas.equilibrate('HP')
+        self.gas.equilibrate('TP')
 
-        LOX.TP = LOX_inj_temp, LOX_inj_p
-        LOX.equilibrate('HP')
+        LOX.TP = LOX_inj_temp, chamber_pressure
+        LOX.equilibrate('TP')
 
-        JetA.TP = JetA_inj_temp, JetA_inj_p
-        JetA.equilibrate('HP')
+        JetA.TP = JetA_inj_temp, chamber_pressure
+        JetA.equilibrate('TP')
 
         print(f'LOX: {LOX.TP}, JetA: {JetA.TP}, gas: {self.gas.TP}')
 
@@ -342,8 +393,10 @@ class CanteraProperties:
         # JetA.HP = JetA.enthalpy_mass, chamber_pressure
 
         self.gas.TP = self.gas.T, chamber_pressure
-        LOX.TP = LOX.T, chamber_pressure
-        JetA.TP = JetA.T, chamber_pressure
+        LOX.TP = LOX.T, LOX_inj_p
+        JetA.TP = JetA.T, JetA_inj_p
+
+        print(f'lox enthalpy: {LOX.enthalpy_mass}, jet a enthalpy: {JetA.enthalpy_mass}')
 
         print(f'LOX: {LOX.TP}, JetA: {JetA.TP}, gas: {self.gas.TP}')
 
@@ -362,27 +415,25 @@ class CanteraProperties:
         # self.gas.SP = self.gas.s, chamber_pressure
         # self.mixture.equilibrate('SP')
         gamma, cp = CanteraProperties._compute_gamma_cp(self.gas)
+        self.gas.TPX = self.mixture.T, self.Pc, self.gas.X
 
-        print(f'cantera cp: {cp}, gamma: {gamma}')
-        print(f'more direct: {self.gas.cp_mass}, gamma: {self.gas.cp_mass/self.gas.cv_mass}')
-        self.mixture()
-
-        error
-
-        return self.gas.enthalpy_mass, gamma, entropy
+        return self.gas.enthalpy_mass, gamma, self.gas.entropy_mass
     
     # https://kyleniemeyer.github.io/rocket-propulsion/thermochemistry/cea_cantera.html#rocket-calculations
     def get_throat_props(self,chamber_pressure,h_chamber):
-        
+
+        self.throat.TPX = self.gas.T, self.gas.P, self.gas.X
+        self.throat.SPX = self.gas.entropy_mass, self.gas.P, self.gas.X
+
         # Define Mach number vs. gamma equation to be solve numerically
         def iterate(pressure):
             self.gas.SP = self.chamber_entropy, pressure
             self.mixture.equilibrate('SP')
-            gamma_throat, cp_throat = CanteraProperties._compute_gamma_cp(self.gas)
-            speed_throat = np.sqrt(2*(h_chamber-cp_throat))
-            Mach_throat = speed_throat / self.gas.sound_speed
+            gamma_throat, cp_throat = CanteraProperties._compute_gamma_cp(self.throat)
+            speed_throat = np.sqrt(2*(h_chamber-self.throat.enthalpy_mass))
+            Mach_throat = speed_throat / self.throat.sound_speed
             converged = np.abs(1-1/(Mach_throat**2)) < .4e-4
-            next_pressure = self.gas.P*(1+gamma_throat*Mach_throat**2)/(1+gamma_throat)
+            next_pressure = self.throat.P*(1+gamma_throat*Mach_throat**2)/(1+gamma_throat)
             return converged, next_pressure, gamma_throat
 
         converged = False
@@ -392,7 +443,7 @@ class CanteraProperties:
             converged, pressure_throat, gamma_throat = iterate(pressure_throat)
             i += 1
 
-        return pressure_throat, self.gas.mean_molecular_weight / 1000, gamma_throat
+        return pressure_throat, self.throat.mean_molecular_weight / 1000, gamma_throat
     
     # Mostly copied & pasted from:
     # https://kyleniemeyer.github.io/rocket-propulsion/thermochemistry/cea_cantera.html#rocket-calculations
@@ -496,8 +547,8 @@ class CanteraProperties:
         
         return gamma_s, spec_heat_p   
 
-cant = CanteraProperties(P_inj=250*0.0689476*10**5,P_amb=1e5,con_rat=5.5,LOX_inj_temp=90.18,JetA_inj_temp=298.15,gas_init_temp=3000,MR_weight=1.8)
-
+cant = CanteraProperties(P_inj=250*0.0689476*10**5,P_amb=1e5,mdot_LOX=1,mdot_kerosene=1,con_rat=5.5,LOX_inj_temp=90.18,JetA_inj_temp=298.15,gas_init_temp=3000,MR_weight=1.8)
+cant.set_contour(np.array([5, 5, 5, 5, 5, 5, 5,5, 5, 5, 4, 3, 2, 3, 4, 5, 6, 7, 8]))
 # full_species = {S.name: S for S in ct.Species.list_from_file('nasa_gas.yaml')}
 # for species in full_species:
 #     print(species)
