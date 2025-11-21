@@ -1,16 +1,17 @@
 # MAIN.PY – Cooling channel optimization with real engine geometry
 
-import sys
-sys.path.insert(0, '/Users/kieranyarberry/Desktop/engineDesigner_v5.0')
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import numpy as np
 from contourDesigner.design import Engine
-from calChamber.calChamber2 import CoolingChannelDesigner, MaterialProperties
+from calorimetryDesigner.calChamber2 import CoolingChannelDesigner, MaterialProperties
 import matplotlib.pyplot as plt
-from calChamber.calChamber2 import CoolingChannelDesigner
+from calorimetryDesigner.calChamber2 import CoolingChannelDesigner
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from scipy.interpolate import griddata
 from plotting import plot_engine_3d, plot_segment_profiles
+import material
 
 # ENGINE DESIGN PARAMETERS
 thrust = 3200 * 4.4482216153  # Thrust [lbf to N]
@@ -39,7 +40,7 @@ adv_data = {
 
 # ENGINE INIT AND DESIGN 
 engine = Engine(
-    thrust, P_c, P_e, con_rat,
+    thrust, [], P_c, P_e, con_rat,
     L_star=L_star, MR=MR,
     adv_data=adv_data, cstar_eff=cstar_eff,
     numPTS=numPTS, fuel=fuel, ox=ox,
@@ -48,11 +49,13 @@ engine = Engine(
 engine.design_engine()
 
 # MATERIAL PROPERTIES 
-material = MaterialProperties(
-    conductivity=40,
-    yield_strength=2.48e8,
-    ultimate_strength=3.00e8
-)
+
+material = material.copper
+# MaterialProperties(
+#     conductivity=40,
+#     yield_strength=2.48e8,
+#     ultimate_strength=3.00e8
+# )
 
 # USER SETTINGS
 n_segments = 16

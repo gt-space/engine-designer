@@ -6,6 +6,7 @@ from typing import Tuple, Dict, List
 from scipy.optimize import root
 from scipy.interpolate import interp1d
 from dataclasses import dataclass
+from material import MaterialProperties
 
 # Data classes and structures
 print("LOADED calChamber2.py")
@@ -389,20 +390,30 @@ class CoolingChannelDesigner:
         avg_props, start, end = self.get_segment_avg_props(i)
         R1 = avg_props[0]
 
-        k = self.material.k
         T_cb = Tc_local  # Local coolant bulk temp
         h_c = self.Gnielinski(f, Re, Pr, cond_c, D_h, mu)
 
-        m = np.sqrt((2 * h_c * fin_width) / k)
-        n_f = (np.tanh(m * (h / fin_width))) / (m * (h / fin_width))
-        h_cf = h_c * ((w + 2 * n_f * h) / (w + fin_width))
+        def residual(T_wg, isSolver=True):
 
-        def residual(T_wg):
             h_g, q_in, T_aw = self.average_bartz(self.engine, T_wg, start, end)
             Q_conv = h_g * A_wg * (T_aw - T_wg)
-            T_fb = T_wg - (Q_conv * (self.inner_wall_thickness / (A_wg * k)))
+
+            # kinda scuffed idek
+            T_fb_guess = T_wg - Q_conv * (self.inner_wall_thickness / (A_wg * self.material.conductivity(T_wg)))
+            T_wall_avg = 0.5 * (T_wg + T_fb_guess)
+            k_wall = self.material.conductivity(T_wall_avg)
+            T_fb = T_wg - (Q_conv * (self.inner_wall_thickness / (A_wg * k_wall)))
+
+            m = np.sqrt((2 * h_c * fin_width) / self.material.conductivity(T_fb))
+            n_f = (np.tanh(m * (h / fin_width))) / (m * (h / fin_width))
+            h_cf = h_c * ((w + 2 * n_f * h) / (w + fin_width))
+
             Q_cool = h_cf * (L_az_channel * N * (2 * h + w)) * (T_fb - T_cb)
-            return Q_conv - Q_cool
+            
+            if (isSolver):
+                return Q_conv - Q_cool
+            else:
+                return T_wg, T_fb, Q_conv
 
         sol = root(residual, T_max_allowed, method='hybr')
         if not sol.success:
@@ -413,10 +424,7 @@ class CoolingChannelDesigner:
         if T_wg > T_max_allowed:
             return None
 
-        h_g, q_in, T_aw = self.average_bartz(self.engine, T_wg, start, end)
-        Q_conv = h_g * A_wg * (T_aw - T_wg)
-        T_fb = T_wg - (Q_conv * (self.inner_wall_thickness / (A_wg * k)))
-        return T_wg, T_fb, Q_conv
+        return residual(T_wg, isSolver=False)
 
     # Other functions
     def pressureDrop(self, rho, L, D_h, v, f) -> float:
