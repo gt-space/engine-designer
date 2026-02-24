@@ -100,7 +100,6 @@ db = MaterialRegistry()
 # ACTUAL DATA
 # ==========================================
 
-
 # --- Aluminum 6061 ---
 #Source:https://trc.nist.gov/cryogenics/materials/6061%20Aluminum/6061_T6Aluminum_rev.htm
 #Source: https://gtvault.sharepoint.com/:b:/r/sites/AE-YellowJacketSpaceProgram/Shared%20Documents/0_YJSP%20Files%20(Sharepoint)/02_Engine_Dev/1_Engine%20Design/Engine%20Dev%20Code/Material%20Database/MMPDS%201.pdf?csf=1&web=1&e=IYBleV
@@ -290,17 +289,14 @@ inc718.add_prop("poisson_ratio", [
 
 inc718.add_prop("thermal_conductivity", [
     np.array([294.26,366.48,477.59,588.71,699.82,810.93,922.04,1033.15,1144.26,1255.37,1366.48]), # Temp (K)
-    np.array([111.1,12.4,14.1,16.0,17.7,19.5,21.2,23.1,25.0,26.7,28.3]) # W/m-K 
+    np.array([11.1,12.4,14.1,16.0,17.7,19.5,21.2,23.1,25.0,26.7,28.3]) # W/m-K 
 ], "W/m-K")
 inc718.add_prop("thermal_conductivity", [
     np.array([294.26,366.48,477.59,588.71,699.82,810.93,922.04,1033.15,1144.26,1255.37,1366.48]), # Temp (K)
-    np.array([111.4,12.5,14.4,16.2,17.9,19.6,21.3,23.2,25.0,26.8,28.7]) # W/m-K 
+    np.array([11.4,12.5,14.4,16.2,17.9,19.6,21.3,23.2,25.0,26.8,28.7]) # W/m-K 
 ], "W/m-K","Aged")
 
-inc718.add_prop("specific_heat", [
-    np.array([293]),
-    np.array([435.0]) # J/kg-K
-], "J/kg-K")
+inc718.add_prop("specific_heat", 435, "J/kg-K")
 
 inc718.add_prop("cte", [
     np.array([77.5944,366.48,477.59,588.71,699.82,810.93,922.04,1033.15]),
@@ -343,7 +339,7 @@ db.add_material(inc718)
 a286steel = Material(name="A286 Steel", category="General", default_condition="Standard")
 
 # A. MECHANICAL PROPERTIES
-a286steel.add_prop("density", 0.0, "kg/m^3") 
+a286steel.add_prop("density", 7920,"kg/m^3")
 a286steel.add_prop("yield_strength", [
     np.array([294.250,477.150,700.150,811.150,866.150,922.150,977.150,1033.150,1089.150]), 
     np.array([6.550e8,6.450e8,6.410e8,6.030e8,6.210e8,6.070e8,5.930e8,4.270e8,2.280e8])
@@ -368,10 +364,7 @@ a286steel.add_prop("thermal_conductivity", [
     np.array([15.100,17.800,21.800,23.900])
 ], "W/m-K")
 
-a286steel.add_prop("specific_heat", [
-    np.array([293.0]), 
-    np.array([0.0])
-], "J/kg-K")
+a286steel.add_prop("specific_heat", 420, "J/kg-K")
 
 a286steel.add_prop("cte", [
     np.array([366.483,477.594,588.706,699.817,810.928,922.039,1033.150]), 
@@ -426,10 +419,7 @@ steel_1018.add_prop("thermal_conductivity", [
     np.array([15.100, 17.800, 21.800, 23.900])
 ], "W/m-K")
 
-steel_1018.add_prop("specific_heat", [
-    np.array([293.0]), 
-    np.array([486.0]) # Typical RT specific heat for 1018
-], "J/kg-K")
+steel_1018.add_prop("specific_heat", 486, "J/kg-K")
 
 steel_1018.add_prop("cte", [
     np.array([366.483, 477.594, 588.706, 699.817, 810.928, 922.039, 1033.150]), 
@@ -518,20 +508,11 @@ carbon_fiber.add_prop("shear_strength", [
 # -------------------------------------------------------------------------
 # B. THERMAL PROPERTIES
 # -------------------------------------------------------------------------
-carbon_fiber.add_prop("thermal_conductivity", [
-    np.array([293.15]), 
-    np.array([11.3])
-], "W/m-K")
+carbon_fiber.add_prop("thermal_conductivity", 11.3, "W/m-K")
 
-carbon_fiber.add_prop("specific_heat", [
-    np.array([293.15]), 
-    np.array([740.0])
-], "J/kg-K")
+carbon_fiber.add_prop("specific_heat", 740, "J/kg-K")
 
-carbon_fiber.add_prop("cte", [
-    np.array([293.15]), 
-    np.array([-0.4e-6])
-], "1/K")
+carbon_fiber.add_prop("cte", -0.4e-6, "1/K")
 
 carbon_fiber.add_prop("melting_point",500, "K")
 
@@ -539,10 +520,7 @@ carbon_fiber.add_prop("melting_point",500, "K")
 # -------------------------------------------------------------------------
 # C. ELECTRICAL PROPERTIES 
 # -------------------------------------------------------------------------
-carbon_fiber.add_prop("electrical_resistivity", [
-    np.array([293.15]), 
-    np.array([1.3e-5])
-], "Ohm-m")
+carbon_fiber.add_prop("electrical_resistivity", 1.3e-5, "Ohm-m")
 
 
 # -------------------------------------------------------------------------
@@ -610,13 +588,8 @@ al_7075_t6.add_prop("cte", [
 
 al_7075_t6.add_prop("melting_point", 750.0, "K") # Solidus temperature is approx 477°C (750K)
 
-# -------------------------------------------------------------------------
-# C. ELECTRICAL PROPERTIES 
-# -------------------------------------------------------------------------
-al_7075_t6.add_prop("electrical_resistivity", [
-    np.array([293.15]), 
-    np.array([0.0])
-], "Ohm-m")
+
+
 
 # -------------------------------------------------------------------------
 # D. METADATA 
@@ -711,64 +684,36 @@ ss_304.add_meta("magnetic",            False) # Austenitic structure is non-magn
 db.add_material(ss_304)
 
 # --- Fiberglass (G-10 Aerospace Grade) ---
-# Source: Data derived from "Typical Properties of Glass Laminates" datasheet
+# Source: https://laminatedplastics.com/g-11.pdf
 fiberglass = Material(name="Fiberglass", category="Composite", default_condition="Standard")
 
 # -------------------------------------------------------------------------
 # A. MECHANICAL PROPERTIES
 # -------------------------------------------------------------------------
-
 fiberglass.add_prop("density", 1800.0, "kg/m^3") 
-
-
-fiberglass.add_prop("yield strength", [
-    np.array([293.15]), 
-    np.array([3.10e8])
-], "Pa")
-
-
-fiberglass.add_prop("elastic_modulus", [
-    np.array([293.15]), 
-    np.array([1.86e10])
-], "Pa")
-
-fiberglass.add_prop("compressive_strength", [
-    np.array([293.15]), 
-    np.array([4.48e8])
-], "Pa")
+fiberglass.add_prop("yield_strength", 3.10e8, "Pa")
+fiberglass.add_prop("elastic_modulus", 1.86e10, "Pa")
+fiberglass.add_prop("compressive_strength", 4.48e8, "Pa")
 
 # -------------------------------------------------------------------------
 # B. THERMAL PROPERTIES
 # -------------------------------------------------------------------------
-
 fiberglass.add_meta("max_operating_temp", 413.15) 
-
-
-fiberglass.add_prop("thermal_conductivity", [
-    np.array([293.15]), 
-    np.array([0.29])
-], "W/m-K")
-
-fiberglass.add_prop("cte", [
-    np.array([293.15]), 
-    np.array([9.9e-6])
-], "1/K")
+fiberglass.add_prop("thermal_conductivity", 0.29, "W/m-K")
+fiberglass.add_prop("cte", 9.9e-6, "1/K")
 
 # -------------------------------------------------------------------------
 # C. ELECTRICAL PROPERTIES 
 # -------------------------------------------------------------------------
-
 fiberglass.add_meta("dielectric_strength", "800 V/mil")
-
-
 fiberglass.add_prop("dielectric_constant", 5.0, "")
 
 # -------------------------------------------------------------------------
 # D. METADATA 
 # -------------------------------------------------------------------------
-fiberglass.add_meta("hardness_rockwell_m", 110) #
-fiberglass.add_meta("water_absorption_24hr", "0.10%") #
-fiberglass.add_meta("flammability_rating", "H-B") #
+fiberglass.add_meta("hardness_rockwell_m", 110)
+fiberglass.add_meta("water_absorption_24hr", "0.10%")
+fiberglass.add_meta("flammability_rating", "H-B")
 fiberglass.add_meta("magnetic", False)
 
 db.add_material(fiberglass)
