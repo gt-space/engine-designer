@@ -21,7 +21,7 @@ def calculate_critical_gas_velocity(gas_props, liquid_props, delta_L, lambd, sig
     h_g = #chamber diameter - h_l  can be approximated as chamber diameter for thin films
     import math
     #liquid and gas factors (a_l and a_g), where k is the wavenumber of the disturbance
-    k = 2 * math.pi / lambd #wavelength of distubance and is taken from wave characterization,
+    k = 2 * math.pi / lambd #wavelength of disturbance and is taken from wave characterization,
                                #this is peridoxical but trust me bro, this should either be calculated
                                #using some set of initial values in the wave characterization function 
                                #or can be treated as equal to film thickness at injection point
