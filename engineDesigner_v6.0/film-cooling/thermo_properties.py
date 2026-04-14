@@ -6,9 +6,9 @@ class Liquid_Props:
         self.mu_l = PropsSI('V', 'T', T_L, 'P', P_cc, 'dodecane')
         self.Cp_l = PropsSI('Cp0mass', 'T', T_L, 'P', P_cc, 'dodecane')
         self.sigma_l = PropsSI('I', 'T', T_L, 'P', P_cc, 'dodecane')
-        H_V = PropsSI('H', 'P', P_cc, 'Q', 1, 'dodecane')
-        H_L = PropsSI('H', 'P', P_cc, 'Q', 0, 'dodecane')
-        self.LHV = H_V-H_L
+        V = PropsSI('H', 'P', P_cc, 'Q', 1, 'dodecane')
+        L = PropsSI('H', 'P', P_cc, 'Q', 0, 'dodecane')
+        self.LHV = V-L
         self.T_sat = PropsSI('T', 'P', P_cc, 'Q', 0, 'dodecane')
 
 class Gas_Props:
