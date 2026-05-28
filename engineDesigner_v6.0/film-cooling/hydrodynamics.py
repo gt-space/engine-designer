@@ -19,12 +19,18 @@ def solve_couette(Gamm_L, liquid_props, P_D, C_f)
 
 
 
-def calculate_critical_gas_velocity(gas_props, liquid_props, delta_L, lambd, sigma, g_0, delta_rho):
+def calculate_critical_gas_velocity(gas_props, liquid_props, delta_L, lambd, sigma, g_0, delta_rho, D_cham):
     #calculate critical gas velocity (U_crit)
 
     #liquid film thickness (h_l) and gas film thickness (h_g)
     h_l = delta_L
-    h_g = #chamber diameter - h_l  can be approximated as chamber diameter for thin films
+    h_g = D_cham #chamber diameter - h_l  can be approximated as chamber diameter for thin films
+    
+    if lambd == None or lambd == "":
+        lambd = h_l #can be approximated as film thickness at injection point for initial calculation of U_crit, then can be updated with wave characterization results in subsequent iterations    
+    else 
+        lambd = lambd #can be taken from wave characterization results in subsequent iterations 
+
     import math
     #liquid and gas factors (a_l and a_g), where k is the wavenumber of the disturbance
     k = 2 * math.pi / lambd #wavelength of disturbance and is taken from wave characterization,

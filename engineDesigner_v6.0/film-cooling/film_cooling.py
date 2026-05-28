@@ -1,9 +1,9 @@
 # main.py
-IMPORT json
-IMPORT thermo_properties AS thermo
-IMPORT hydrodynamics AS hydro
-IMPORT heat_mass_transfer AS hmt
-IMPORT post_processing AS post
+import json
+import thermo_properties as thermo
+import hydrodynamics as hydro
+import heat_mass_transfer as hmt
+import post_processing as post
 
 # 1. Initialization
 config = json.load("config.json")
@@ -13,10 +13,10 @@ Gamma_L = config.Gamma_L_initial
 T_L = config.T_L_initial
 
 # Data storage for plotting
-data_log = create_empty_dataframe()
+data_log = []
 
 # 2. Main Space-Marching Loop
-WHILE Gamma_L > 0 AND x < config.chamber_length_m:
+while Gamma_L > 0 and x < config.chamber_length_m:
     
     # Get Properties
     liquid_props = thermo.get_liquid_props(T_L, config.P_cc_bar)
@@ -52,7 +52,7 @@ WHILE Gamma_L > 0 AND x < config.chamber_length_m:
     x = x + dx
 
 # 4. End Simulation
-PRINT("Coolant Depleted!")
-PRINT("Film-Cooled Length (FCL) = ", x, " meters")
+print("Coolant Depleted!")
+print("Film-Cooled Length (FCL) = ", x, " meters")
 
 post.plot_results(data_log)
