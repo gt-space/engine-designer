@@ -1,7 +1,7 @@
 # post_processing.py
-IMPORT matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
-FUNCTION plot_results(data_log):
+def plot_results(data_log):
     # Extract arrays
     x_array = data_log.get_column("x")
     
