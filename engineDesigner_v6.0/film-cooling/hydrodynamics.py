@@ -1,10 +1,10 @@
-def calculate_friction_factor(gas_props):
+def calculate_friction_factor(gas_props, x):
     Re_x = (gas_props.rho_g * gas_props.U_g * x) / gas_props.mu_g
     C_f = .0592 * Re_x ** (-0.2) # Friction factor for distance x from film injection
     return C_f
 
 
-def solve_couette(Gamm_L, liquid_props, P_D, C_f)
+def solve_couette(Gamm_L, liquid_props, P_D, C_f):
     #calculate fillm thickness(delta_L)
     numerator = 2 * liquid_props.mu_L * Gamm_L
     denominator = P_D * C_f * liquid_props.rho_l
@@ -28,7 +28,7 @@ def calculate_critical_gas_velocity(gas_props, liquid_props, delta_L, lambd, sig
     
     if lambd == None or lambd == "":
         lambd = h_l #can be approximated as film thickness at injection point for initial calculation of U_crit, then can be updated with wave characterization results in subsequent iterations    
-    else 
+    else:
         lambd = lambd #can be taken from wave characterization results in subsequent iterations 
 
     import math
