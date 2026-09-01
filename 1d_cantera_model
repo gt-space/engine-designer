@@ -1,0 +1,334 @@
+import cantera as ct
+import math
+import matplotlib.pyplot as plt
+import numpy as np
+import time
+from pathlib import Path
+
+#in current folder, creates a folder for the graphs. graphs vs. time will be placed directly into this folder.
+#creates a subfolder in the graphs folder for the position. this folder has two subfolders, one for temperature and one for pressure
+#since a new temperature vs. position and a new pressure vs. position graph is created at certain times, the total amount of graphs will be
+#equal to the number of timesteps divided by 0.05, doubled plus the 8 vs. time graphs.
+script_dir = Path(__file__).parent
+graph_dir = script_dir / "graphs 1d"
+graph_dir.mkdir(exist_ok = True)
+
+#conversions
+psiaToPa = 6894.76
+inch_to_meter = 0.0254
+
+#variables
+reactorLength = 0.035 #sets a defined reactor length for all reactors which helps smooth out volume issues
+simTime = 2
+
+#initial conditions
+mdotFuel = 1.55 #from regen qual trr
+mdotLOX = 3.1 #from regen qual trr
+mdotTotal = mdotFuel + mdotLOX
+initialPc = 250 * psiaToPa #from teams messages
+valveCoeff = 1e-4 #initial guess was determined experimentally
+
+#calculate volume of each reactor
+x = [] #used to get liner geometry
+y = [] #used to get liner geometry
+xArr = [] #used in graphPos(), stores how far each reactor is from the injector
+startConv = 76 #index of point that starts the converging section
+endConv = 104 #index of point that ends the converging section
+nozzlePoint = 105 #index of point that has the smallest area
+startDiv = 106 #index of point that starts the diverging section
+endDiv = 151 #index of point that ends the diverging section
+areas = [] #used to store cross-sectional areas for the valve coefficient updates
+with open(script_dir / "liner_contour_inner_CR5_PE8_MR2.txt", "r") as f: #reads the contour text file where contour is in meters
+    for line in f:
+        y.append(float(line[0:8]))
+        x.append(float(line[9:17]))
+convX = x[startConv:endConv+1] #x values of converging section
+convY = y[startConv:endConv+1] #y values of converging section
+divX = x[startDiv:endDiv+1] #x values of diverging section
+degreePolynomial = 5
+coeffsConv = np.polyfit(convX, convY, degreePolynomial) #estimates line of best fit for converging section
+#chamber volumes
+totalChamberLength = convX[0] #end of chamber is the start of the converging section
+numChamber = int(totalChamberLength // reactorLength) #calculates the amount of chamber reactors given the length of each reactor
+chamberVolume = math.pi * convY[0] * convY[0] * reactorLength #volume is πr^2h
+for i in range(0, numChamber):
+    xArr.append(i * reactorLength)
+    areas.append(math.pi * convY[0] * convY[0]) #chamber cross-sectional areas
+#converging section volumes
+totalConvLength = convX[-1] - convX[0] #length of chamber using the contour values above
+numConv = int(totalConvLength // reactorLength)
+convXCoords = [] #need x coordinates to use line of best fit
+for i in range(0, numConv): #for each reactor in the converging section
+    position = convX[0] + (i * reactorLength) #calculates position of each reactor, starting from the start of the converging section
+    convXCoords.append(position)
+    xArr.append(position)
+convVolumes = [] #initializes array that will hold the converging reactor volumes in order. to be used in reactor initialization
+for i in range(0, numConv): #for each reactor in the converging section
+    reactorRadius = 0 #initialize reactor radius variable
+    for j in range(0, degreePolynomial + 1): #for each of the coefficients
+        exponent = degreePolynomial - j #what power of x it is currently looping through
+        reactorRadius += coeffsConv[j] * (convXCoords[i] ** exponent) #solves equation for line of best fit at this specific reactor
+    if reactorRadius > convY[0]:
+        reactorRadius = convY[0]
+    convVolumes.append(math.pi * reactorRadius * reactorRadius * reactorLength) #calculates reactor volume and adds to convVolumes
+    areas.append(math.pi * reactorRadius * reactorRadius) #converging section cross-sectional areas
+#nozzle volume
+throatRadius = y[nozzlePoint] #throat radius is taken to be smallest radius in the contour
+throatArea = math.pi * throatRadius * throatRadius #calculates throat area for cstar calculation
+nozzleVolume = math.pi * reactorLength * throatRadius * throatRadius #to be used later
+xArr.append((divX[0] + convX[-1]) / 2) #nozzle is located at midpoint between end of diverging section and start of converging section
+areas.append(throatArea) #nozzle area
+#calculate total number of reactors
+numReactors = numConv + numChamber + 1
+print("number of reactors:", numReactors)
+#debug code for checking reactor volumes
+print("chamberVolume:", chamberVolume)
+print("convVolumes:", convVolumes)
+print("ratio convVolumes[0] / chamberVolume:", convVolumes[0] / chamberVolume)
+print("nozzleVolume:", nozzleVolume)
+radius_check = 0
+for j in range(0, degreePolynomial + 1):
+    exponent = degreePolynomial - j
+    radius_check += coeffsConv[j] * (convXCoords[0] ** exponent)
+print("fitted radius at convX[0]:", radius_check, " vs actual convY[0]:", convY[0])
+
+#reactor initialization
+reactorList = [] #organizational list of all reactors for easy access
+currentPressure = initialPc
+pressureRamp = [] #used to decrement the pressure from chamber pressure down to ambient
+pressStep = (initialPc - ct.one_atm) / numReactors
+for i in range(0, numReactors):
+    pressureRamp.append(currentPressure)
+    currentPressure -= pressStep
+index = 0 #index of pressureRamp
+#initialize chamber reactors
+for i in range(0, numChamber):
+    air = ct.Solution("nDodecane_Reitz.yaml", "nDodecane_RK")
+    air.TPX = 298.15, pressureRamp[index], "o2:0.21, n2:0.79"
+    index += 1
+    currentReactor = ct.Reactor(air, volume=chamberVolume, clone=True)
+    reactorList.append(currentReactor)
+#initialize converging section reactors
+for i in range(0, numConv):
+    air = ct.Solution("nDodecane_Reitz.yaml", "nDodecane_RK")
+    air.TPX = 298.15, pressureRamp[index], "o2:0.21, n2:0.79"
+    index += 1
+    currentReactor = ct.Reactor(air, volume=convVolumes[i], clone=True)
+    reactorList.append(currentReactor)
+#initialize nozzle reactor
+air = ct.Solution("nDodecane_Reitz.yaml", "nDodecane_RK")
+air.TPX = 298.15, pressureRamp[index], "o2:0.21, n2:0.79"
+currentReactor = ct.Reactor(air, volume=nozzleVolume, clone=True)
+reactorList.append(currentReactor)
+
+#set up pilot reactors for ignition
+gas_pilot = ct.Solution("nDodecane_Reitz.yaml", "nDodecane_RK")
+gas_pilot.TP = 298.15, pressureRamp[0]
+gas_pilot.set_mixture_fraction(mdotFuel / mdotTotal, fuel="c12h26:1.0", oxidizer="o2:1.0")
+gas_pilot.equilibrate("HP")
+numPilotReactors = numReactors
+#create a temp ramp
+tramp = [] #array to store temp ramp values
+tstep = (gas_pilot.T - 298.15) / (numPilotReactors - 1) #each reactor will step down temp this much
+currentTemp = gas_pilot.T
+for i in range(numPilotReactors):
+    tramp.append(currentTemp)
+    currentTemp -= tstep
+#set the temperatures
+for i in range(numPilotReactors):
+    gas_pilot = ct.Solution("nDodecane_Reitz.yaml", "nDodecane_RK")
+    gas_pilot.TP = tramp[i], pressureRamp[i]
+    gas_pilot.set_mixture_fraction(mdotFuel / mdotTotal, fuel="c12h26:1.0", oxidizer="o2:1.0")
+    gas_pilot.equilibrate("TP")
+    reactorList[i].phase.TPX = tramp[i], pressureRamp[i], gas_pilot.X
+    reactorList[i].syncState()
+
+#set up injector
+# Create a single mixed inlet reservoir
+mixed = ct.Solution("nDodecane_Reitz.yaml", "nDodecane_RK")
+mixed.TP = 250, initialPc
+mixed.set_mixture_fraction(mdotFuel / mdotTotal, fuel="c12h26:1.0", oxidizer="o2:1.0")
+mixedRes = ct.Reservoir(mixed, clone=True)
+mixedInj = ct.MassFlowController(mixedRes, reactorList[0])
+gammaMixed = mixed.cp_mass / mixed.cv_mass #to be used later in updating valve coefficients
+timeOfStartup = 1e-3
+timeOfWindDown = 13
+def ramp(t):
+    if t < timeOfStartup:
+        return t / timeOfStartup
+    elif t < timeOfWindDown: #end of injecting
+        return 1.0
+    elif t < 15: #ramp down
+        return (15 - t) / 2
+    return 0.0
+def mixed_mdot(t):
+    return ramp(t) * mdotTotal
+mixedInj.mass_flow_rate = mixed_mdot
+
+# #set up ignition source: Gaussian heat pulse into the first (injector) reactor
+# igniterFluid = ct.Solution("nDodecane_Reitz.yaml", "nDodecane_RK")
+# igniterFluid.TPX = reactorList[0].phase.TPX #same state as reactor 0, so no net mass/species transfer
+# igniterRes = ct.Reservoir(igniterFluid, clone=True)
+# #gaussian heat pulse parameters
+# ignitionTime = 2e-3 #[s] center of the pulse
+# ignitionWidth = 1e-4 #[s] standard deviation (controls pulse duration)
+# E_total = 5000 #in J, amount of total energy provided by the igniter
+# ignitionPower = E_total / (ignitionWidth * math.sqrt(2 * math.pi)) #[W/m^2] peak heat flux at t = ignitionTime
+# def gaussian_heat_flux(t):
+#     return ignitionPower * math.exp(-((t - ignitionTime) ** 2) / (2 * ignitionWidth ** 2))
+# #create wall with U=0 (no passive conduction) and a purely prescribed heat_flux(t)
+# #area is set to 1 m^2 so heat_flux[W/m^2] == the actual heat rate injected in Watts
+# igniterWall = ct.Wall(igniterRes, reactorList[0], A=1.0, U=0.0)
+# igniterWall.heat_flux = lambda t: gaussian_heat_flux(t)
+
+#connect reactors
+valves = [] #used to store valve objects
+for i in range(1, len(reactorList), 1):
+    previousReactor = reactorList[i-1]
+    currentReactor = reactorList[i]
+    connection = ct.Valve(previousReactor, currentReactor, K=valveCoeff) #each reactor is connected by a valve object, valve constant chosen arbitrarily
+    valves.append(connection)
+
+#set up outlet
+outletSolution = ct.Solution("nDodecane_Reitz.yaml", "nDodecane_RK")
+outletSolution.TPX = 298.15, ct.one_atm, "o2:0.21, n2:0.79" #ambient air
+outletRes = ct.Reservoir(outletSolution, clone=True)
+outlet = ct.Valve(reactorList[-1], outletRes, K=valveCoeff)
+
+#set up reactor network
+network = ct.ReactorNet(reactorList)
+network.max_err_test_fails = 10  # default is 7, give CVODE more attempts
+network.atol = 1e-12  # tighten absolute tolerance for trace species
+network.rtol = 1e-9   # tighten relative tolerance
+network.max_time_step = 1e-6
+# print(network.n_vars) #for debug purposes
+# print(network.component_name(289)) #for debugging purposes
+# print(network.component_name(224)) #for debugging purposes
+# print(network.component_name(225)) #for debugging purposes
+# print(network.component_name(227)) #for debugging purposes
+
+#calculate ideal cstar by creating equilibrium mixture
+gas_eq = ct.Solution("nDodecane_Reitz.yaml", "nDodecane_RK")
+gas_eq.TP = 298.15, initialPc
+gas_eq.set_mixture_fraction(mdotFuel/mdotTotal, fuel="c12h26:1.0", oxidizer="o2:1.0") #mixture ratio comes from vespula requirements
+gas_eq.equilibrate("HP")
+gamma = gas_eq.cp_mass / gas_eq.cv_mass
+R_u = ct.gas_constant
+M = gas_eq.mean_molecular_weight
+R_specific = R_u / M
+cstar_ideal = math.sqrt((1 / gamma) * (((gamma + 1) / 2) ** ((gamma + 1) / (gamma - 1))) * (R_specific * gas_eq.T))
+
+#set up way to graph values versus time
+def graphTime(reactorName, variableName, timeArr, dataArr):
+    plt.figure()
+    plt.plot(timeArr, dataArr)
+    plt.xlabel("Time")
+    plt.ylabel(variableName)
+    plotName = reactorName + "'s " + variableName + " Over Time.png"
+    plt.savefig(graph_dir / plotName)
+    plt.close()
+
+#set up way to calculate cstar efficiency and then graph it vs. time
+def graphCStar(timeArr, cstar):
+    plt.figure()
+    plt.plot(timeArr, cstar)
+    plt.xlabel("Time")
+    plt.ylabel("C* Efficiency")
+    plt.savefig(graph_dir / "C* Efficiency Over Time.png")
+    plt.close()
+
+#simulate combustion
+#initialize all arrays
+timeArr = [] #initialize array that will store all time values
+timeCstar = [] #the cstar array will be the same as timeArr but without 0
+tempInj = [] #stores all previous temperature values at the injector
+pressInj = [] #stores all previous pressure values at the injector
+tempConv = [] #stores all previous temperature values at the start of the converging section
+pressConv = [] #stores all previous pressure values at the start of the converging section
+tempNozzle = [] #stores all previous temperature values at the nozzle
+pressNozzle = [] #stores all previous pressure values at the nozzle
+cstarArr = [] #stores all previous c* efficiency values
+iteration = 1 #useful debugging tool to see how many iterations the code runs
+reachesSteadyState = 1.5 #time the pressure levels, used to determine when to start calculating cstar_efficiency
+while network.time < simTime: #loops the amount of times specified
+    timeArr.append(network.time) #adds the current timestamp to the array
+    #graph temperature and position vs. time for injector
+    tempInj.append(reactorList[0].T)
+    pressInj.append(reactorList[0].phase.P / psiaToPa)
+    #graph temperature and position vs. time for start of converging section
+    tempConv.append(reactorList[numChamber].T)
+    pressConv.append(reactorList[numChamber].phase.P / psiaToPa)
+    #graph temperature and position vs. time for the nozzle
+    tempNozzle.append(reactorList[-1].T)
+    pressNozzle.append(reactorList[-1].phase.P / psiaToPa)
+    #graph c* efficiency vs. time up to this time step
+    if network.time > reachesSteadyState and network.time < timeOfWindDown:
+        timeCstar.append(network.time) #adds current timestamp to array
+        totalPressure = 0 #placeholder variable to be used in calculation of average chamber pressure
+        for j in range(0, numChamber): #for each reactor in the chamber
+            totalPressure += reactorList[j].phase.P
+        chamberPress = totalPressure / (numChamber) #averages pressures in each of the chamber reactors
+        # mdot through throat from choked flow
+        nozzleP = reactorList[-1].phase.P
+        nozzleT = reactorList[-1].T
+        gamma_throat = reactorList[-1].phase.cp_mass / reactorList[-1].phase.cv_mass
+        R_throat = ct.gas_constant / reactorList[-1].phase.mean_molecular_weight
+        mdot_throat = throatArea * nozzleP * math.sqrt(gamma_throat / (R_throat * nozzleT)) * ((2 / (gamma_throat + 1)) ** ((gamma_throat + 1) / (2 * (gamma_throat - 1))))
+        cstar_actual = chamberPress * throatArea / mdot_throat
+        cstar_efficiency = cstar_actual / cstar_ideal
+        cstarArr.append(cstar_efficiency)
+        if iteration % 10 == 0:
+            print("iteration " + str(iteration) + ", time " + str(network.time))
+            print("chamberPress (psia): " + str(chamberPress / psiaToPa))
+            print(cstar_actual)
+            print(cstar_ideal)
+            print(cstar_efficiency)
+    #update valve coefficients
+    r = ramp(network.time)
+    mdot_current = r * (mdotFuel + mdotLOX)
+    minDP = 0.01 * reactorList[0].phase.P
+    maxKv = mdotTotal / ((1/numReactors) * initialPc)  # physically motivated cap
+    for i in range(0, len(valves)):
+        currentPress = reactorList[i+1].phase.P
+        previousPress = reactorList[i].phase.P
+        if previousPress - currentPress > minDP:
+            valves[i].valve_coeff = min(mdot_current / (previousPress - currentPress), maxKv) #Kv = mdot / (Pc - Pback)
+    if reactorList[-1].phase.P - ct.one_atm > minDP:
+        outlet.valve_coeff = min(mdot_current / (reactorList[-1].phase.P - ct.one_atm), maxKv)
+
+    #debugging stuff
+    if iteration % 10 == 0 or iteration == 1:
+        print("iteration " + str(iteration) + ", time " + str(network.time))
+    if iteration == 1 or iteration % 100 == 0:
+        print("nozzle pressure (psia): " + str(reactorList[-1].phase.P / psiaToPa))
+        print("nozzle temperature: " + str(reactorList[-1].phase.T))
+        print("first 3 reactor pressures (psia): " + str([reactorList[0].phase.P / psiaToPa, reactorList[1].phase.P / psiaToPa, reactorList[2].phase.P / psiaToPa]))
+        print("injector temperature: " + str(reactorList[0].phase.T))
+        print("first valve coefficient: " + str(valves[0].valve_coeff))
+        # # gas = reactorList[0].phase
+        # # for i in np.argsort(gas.X)[::-1][:15]:
+        # #     print(gas.species_names[i], gas.X[i])
+        # print("equivalence ratio: " + str(reactorList[-1].phase.equivalence_ratio()))
+        # print(reactorList[0].phase())
+    # if network.time > 1.8e-3 and network.time < 2.5e-3: #for debugging the igniter
+    #     print(reactorList[0].phase())
+    
+    try:
+        network.step()
+    except Exception as e: #failure message when it errors
+        print("FAILED at t =", network.time)
+        for idx, r in enumerate(reactorList):
+            try:
+                print(idx + 1, r.T, r.phase.P / psiaToPa, r.mass)
+            except Exception as inner:
+                print(idx, "STATE UNREADABLE:", inner)
+        raise
+    iteration += 1
+
+graphTime("Injector", "Temperature", timeArr, tempInj)
+graphTime("Injector", "Pressure (psia)", timeArr, pressInj)
+graphTime("Start of Converging Section", "Temperature", timeArr, tempConv)
+graphTime("Start of Converging Section", "Pressure (psia)", timeArr, pressConv)
+graphTime("Nozzle", "Temperature", timeArr, tempNozzle)
+graphTime("Nozzle", "Pressure (psia)", timeArr, pressNozzle)
+graphCStar(timeCstar, cstarArr)
