@@ -21,9 +21,9 @@ from rocketisp.geometry import Geometry
 from rao_data import theta_e_data, theta_n_data
 
 # --- 1. PRIMARY ENGINE INPUTS ---
-Pc = 350.0             # psia, Chamber Pressure
+Pc = 250.0             # psia, Chamber Pressure
 Pe = 7.0               # psia, Exit Pressure (for perfect expansion)
-T_target = 3000.0      # lbf, Target Actual Thrust
+T_target = 3174.0      # lbf, Target Actual Thrust
 MR = 2.2               # Mixture Ratio
 Cstar_eff = 0.9        # C* Efficiency 
 Cf_eff = 0.95          # Cf Efficiency 
