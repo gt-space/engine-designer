@@ -162,9 +162,13 @@ G_opt = Geometry(Rthrt=R_t, CR=eps_c_opt, RupThroat=Rtc_opt,
                  RchmConv=Rtc_opt, cham_conv_deg=theta_c_opt, LchamberInp=Lc_opt,
                  RdwnThroat=Rtd_Rt, eps=eps, pcentBell=Lf_opt)
 
-# Note: Assumes theta_n_data and theta_e_data are predefined arrays in your workspace
 theta_n_deg = float(griddata(theta_n_data[:, :2], theta_n_data[:, 2], (Lf_opt, eps), method='linear'))
+if np.isnan(theta_n_deg):
+    theta_n_deg = float(griddata(theta_n_data[:, :2], theta_n_data[:, 2], (Lf_opt, eps), method='nearest'))
+
 theta_e_deg = float(griddata(theta_e_data[:, :2], theta_e_data[:, 2], (Lf_opt, eps), method='linear'))
+if np.isnan(theta_e_deg):
+    theta_e_deg = float(griddata(theta_e_data[:, :2], theta_e_data[:, 2], (Lf_opt, eps), method='nearest'))
 
 # --- 6. CSV CONTOUR EXPORT ---
 noz_opt = G_opt.getNozObj()
