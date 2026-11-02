@@ -1,72 +1,12 @@
 import math
 import numpy as np
+from Functions.PressureDrop import darcyWeishbachFriction
+
+# Sources for all of this in: https://app.notion.com/p/Accuracy-of-Convective-Coefficents-2a627990d78e80758bc4d42c34b72578
+
 
 # ==========================================
-# IMPORTING CRITICAL DATABASES & LIBRARIES
-# ==========================================
-import matprotlib as mp           # Material Database
-from rocketcea.cea_obj import CEA_Obj  # Rocket CEA Database
-
-try:
-    import CoolProp.CoolProp as CP 
-except ImportError:
-    pass
-
-# ==========================================
-# 1. HOT-GAS SIDE HEAT TRANSFER (COMBUSTION)
-# ==========================================
-
-def heat_flux_temperature(h_g, T_gaw, T_gw):
-    """Hot-Gas Side Convective Heat Flux using Temperature."""
-    return h_g * (T_gaw - T_gw)
-
-def heat_flux_enthalpy(h_g, c_p_gn, i_gaw, i_gw):
-    """Hot-Gas Side Convective Heat Flux using Enthalpy."""
-    return (h_g / c_p_gn) * (i_gaw - i_gw)
-
-def adiabatic_wall_enthalpy(i_gs, Pr_gx, i_g0):
-    """Adiabatic wall enthalpy (Bartz and Eckert)."""
-    return i_gs + (Pr_gx**(1/3)) * (i_g0 - i_gs)
-
-def bartz_sigma_correction(T_hw, T_s, gamma, M):
-    """Calculates the sigma correction factor for the Bartz correlation."""
-    term1 = 0.5 * (T_hw / T_s) * (1 + ((gamma - 1) / 2) * M**2) + 0.5
-    term2 = 1 + ((gamma - 1) / 2) * M**2
-    return 1.0 / ((term1**0.68) * (term2**0.12))
-
-def bartz_correlation(D_star, mu_0, cp_0, Pr_0, p_c, g, c_star, r_c, A_star, A, sigma):
-    """
-    Full Bartz Correlation for Combustion Gases.
-    Notes:
-    - Highly sensitive to hot gas transport properties.
-    - Best for rapid, preliminary design and initial throat sizing.
-    - Most accurate at and near the nozzle throat.
-    - Known under-predictor in the combustion chamber (often 40-50% off actuals).
-    - Ignores radiation and combustion instabilities.
-    """
-    term1 = 0.026 / (D_star**0.2)
-    term2 = ((mu_0**0.2) * cp_0) / (Pr_0**0.6)
-    term3 = ((p_c * g) / c_star)**0.8
-    term4 = (D_star / r_c)**0.1
-    term5 = (A_star / A)**0.9
-    return term1 * term2 * term3 * term4 * term5 * sigma
-
-def ievlev_correlation(B, tau_lambda, D_bar, P_cc, d_th, S_K_T, Pr):
-    """
-    Ievlev semi-analytical convective heat flux.
-    Notes:
-    - A known over-predictor (originally designed for pipes, treats the engine like a pipe).
-    - Very similar to Bartz (< 10% difference in the throat area).
-    - Highly accurate at the throat but decreases significantly away from it.
-    """
-    # Note: tau_lambda is divided by D_bar**1.82 to match the math logic properly
-    term1 = B * (tau_lambda / (D_bar**1.82))
-    term2 = (P_cc**0.85) / (d_th**0.15)
-    term3 = S_K_T / (Pr**0.58)
-    return term1 * term2 * term3
-
-# ==========================================
-# 2. ADVANCED GAS PROPERTIES (KINETIC THEORY)
+# 1. Advanced Gas Properties (Kinetic Theory)
 # ==========================================
 # Introduced for Coupled Heat Transfer Calculations 
 
@@ -76,7 +16,7 @@ def eucken_thermal_conductivity(mu_i, W_i, c_pi):
     Useful for varying properties in fluid-structure coupled domains.
     """
     R_0 = 8.314462618 # Universal gas constant in J/(mol K)
-    return (mu_i * R_0 / W_i) * (c_pi * W_i / R_0 + 1.25)
+    return (mu_i * R_0 / W_i) * (c_pi * (W_i/1000) / R_0 + 1.25)
 
 def lennard_jones_viscosity(W_i, T, sigma_i, epsilon_i):
     """
@@ -95,7 +35,7 @@ def lennard_jones_viscosity(W_i, T, sigma_i, epsilon_i):
 
 
 # ==========================================
-# 3. COOLANT LIQUIDS (LAMINAR FLOW - FORCED & MIXED)
+# 2. Coolant Liquids (Laminar Flow - Forced and Mixed)
 # ==========================================
 
 def hausen_laminar(D, L, Re, Pr, mu, mu_w):
@@ -112,7 +52,7 @@ def kays_laminar(D, L, Re, Pr, mu, mu_w):
     Kays correlation for laminar forced convection.
     Notes: Valid only for small temperature differences between wall and bulk.
     """
-    term1 = (0.36 * Re * Pr) / (L / D)
+    term1 = (0.036 * Re * Pr) / (L / D)
     term2 = math.log((L / D) / (0.0011 * Re * Pr) + 1)
     return 4.36 + term1 * term2 * ((mu / mu_w)**0.14)
 
@@ -146,7 +86,7 @@ def eubank_proctor_mixed(Pr, Re, D, L, Gr, mu, mu_w):
 
 
 # ==========================================
-# 4. COOLANT LIQUIDS (TURBULENT FLOW)
+# 3. Coolant Liquids (Turbulent Flow)
 # ==========================================
 
 def dittus_boelter_turbulent(Re, Pr):
@@ -189,14 +129,21 @@ def mcadams_turbulent_b(Re, Pr, L, D):
     """McAdams variant B. Overpredictor (deviations 1.9% to 21.7%)."""
     return 0.023 * (Re**0.8) * (Pr**0.4) * (1 + ((L / D)**-0.7))
 
-def gnielinski_turbulent(Re, Pr):
+def gnielinski_turbulent(Re, Pr, roughness=0.0, Dh=None):
     """
-    Gnielinski correlation.
-    Notes: Recommended for Re > 2300. Overpredictor, but consistent within 10%.
+    Gnielinski correlation (supports both smooth and rough walls).
     """
-    f = (1.82 * math.log10(Re) - 1.64)**-2
+    if np.any(Re <= 3000):
+        raise ValueError(f"Reynolds number too low for Gnielinski correlation: Re = {Re}")
+        
+    if roughness > 0 and Dh is not None:
+        f = darcyWeishbachFriction(Re, roughness, Dh)
+    else:
+        # Smooth-wall Petukhov Darcy friction factor
+        f = (1.82 * np.log10(Re) - 1.64)**-2
+
     numerator = (f / 8) * (Re - 1000) * Pr
-    denominator = 1 + 12.7 * ((f / 8)**0.5) * (Pr**(2/3) - 1)
+    denominator = 1 + 12.7 * np.sqrt(f / 8) * (Pr**(2/3) - 1)
     return numerator / denominator
 
 def friend_metzner_turbulent(Re, Pr, mu, mu_w):
@@ -213,12 +160,12 @@ def churchill_turbulent_a(Re, Pr):
     """
     f_05 = 1 / (2.21 * math.log(Re / 7))
     numerator = 0.079 * f_05 * Re * Pr
-    denominator = (1 + Pr**0.8)**(5/6)
+    denominator = (1 + Pr**-0.8)**(5/6)
     return 6.3 + (numerator / denominator)
 
 
 # ==========================================
-# 5. SPECIFIC PROPELLANTS & GASES
+# 4. Specific Propellants and Gases
 # ==========================================
 
 def rp1_shell_correlation(Re_cs, Pr_cs):
@@ -247,7 +194,7 @@ def mccarthy_wolf_hydrogen(Re, Pr, T_w, T_b):
 
 
 # ==========================================
-# 6. THE CORRELATION DISPATCHER
+# 5. Correlation Organization
 # ==========================================
 
 CORRELATIONS = {

@@ -1,4 +1,3 @@
-# Geometry/CoolingChannel.py
 import matprotlib as mp
 import numpy as np
 from scipy.interpolate import PchipInterpolator
@@ -116,13 +115,13 @@ def getCoolingChannelGeometryFromPoints(contour, N_ch, w_t, AR_t, C_chamber, C_e
     C_post    = 1.10
 
     w_ch_points = np.array([
-        2.0 * w_t,
-        2.0 * w_t,
-        1.15 * w_t,
+        C_chamber * w_t,
+        C_chamber * w_t,
+        C_pre * w_t,
         1.00 * w_t,
-        1.1 * w_t,
-        1.5 * w_t,
-        1.5 * w_t
+        C_post * w_t,
+        C_exit * w_t,
+        C_exit * w_t
     ])
 
     AR_points = np.array([

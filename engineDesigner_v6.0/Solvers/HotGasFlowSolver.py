@@ -1,5 +1,4 @@
 import numpy as np
-from Geometry.Contour import getCurrentContour
 from Geometry.Contour import getCurrentEngineParameters
 from EngineParameters import(fuel, oxidizer, Pc, MR, Cstar_eff)
 from Functions import HotGasFlow

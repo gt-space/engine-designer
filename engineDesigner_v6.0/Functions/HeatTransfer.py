@@ -1,51 +1,38 @@
-from Geometry.Contour import getCurrentEngineParameters
-from Solvers.HotGasFlowSolver import getGasPropertiesCEA
 from EngineParameters import Pc
+from Functions.Correlations import calculate_nusselt
 import numpy as np
-from CoolProp.CoolProp import PropsSI
+from Solvers.HotGasFlowSolver import getGasPropertiesCEA
 
-#Get gas properties
-gas = getGasPropertiesCEA()
-T0 = gas["T0"]
-gamma = gas["gamma"]
-cp_g = gas["cp_g"]
-mu_g = gas["mu_g"]
-Pr_g = gas["Pr"]
-Cstar_actual = gas["Cstar_actual"]
-
-#Get engine geometry
-geometry_params = getCurrentEngineParameters()
-R_t = geometry_params["R_t"] * 0.0254   # in -> m
-Rtc_Rt = geometry_params["Rtc_Rt"]
-Rtc = Rtc_Rt * R_t
-At = np.pi * R_t**2
-
-#Convert chamber pressure to pascals
-Pc_Pa = Pc*6894.75729
-
+# Convert chamber pressure to Pascals once
+Pc_Pa = Pc * 6894.75729
 
 #Coolant-side convection coefficient
-def coolant_htc(Re, Pr, k_cool, roughness, Dh):
+def coolant_htc(Re, Pr, k_cool, roughness, Dh, method="gnielinski", **kwargs):
+    if method == "gnielinski":
+        Nu = calculate_nusselt("gnielinski", Re=Re, Pr=Pr, roughness=roughness, Dh=Dh)
+    else:
+        Nu = calculate_nusselt(method, Re=Re, Pr=Pr, **kwargs)
 
-    #don't accept channel designs that have a reynolds number < 3000
-    #caucses gnielinksi correlation to fail
-    if Re <= 3000:
-        raise ValueError(f"Reynolds number too low for Gnielinski correlation: Re = {Re:.1f}")
-    
-    #darcy friction factor, Mileikovskyi Tkachenko
-    A0 = -0.79638*np.log(roughness/Dh/8.208+7.3357/Re) # A0
-    A1 = Re*roughness/Dh+9.3120665*A0 # A1
-    f = ((8.128943 + A1)/(8.128943 * A0 - 0.86859209 * A1* np.log(A1 / (3.7099535 * Re))))**2
-    
-    #Nusselts Number
-    Nu = ((f/8)*(Re-1000)*Pr/(1+ 12.7 * np.sqrt(f / 8)*(Pr**(2/3)-1))) #Gnielinski
-
-    #Convection Coefficient
     hc = Nu * k_cool / Dh
     return hc, Nu
 
-#gas side Bartz convection coefficient 
+#Gas-side Bartz convection coefficient 
 def bartz_hg(A_local, M_local,Twg):
+    
+    #Get gas properties
+    gas = getGasPropertiesCEA()
+    T0 = gas["T0"]
+    gamma = gas["gamma"]
+    cp_g = gas["cp_g"]
+    mu_g = gas["mu_g"]
+    Pr_g = gas["Pr"]
+    Cstar_actual = gas["Cstar_actual"]
+
+    R_t = geometry_params["R_t"] * 0.0254   # in -> m
+    Rtc_Rt = geometry_params["Rtc_Rt"]
+    Rtc = Rtc_Rt * R_t
+    At = np.pi * R_t**2
+
 
     #Find Bartz Correction Factor
     mach_term = (1+(gamma-1)/2*M_local**2)
@@ -60,6 +47,20 @@ def bartz_hg(A_local, M_local,Twg):
         * sigma
     )
     return hg
+
+def ievlev_hg(B, tau_lambda, D_bar, P_cc, d_th, S_K_T, Pr):
+    """
+    Ievlev semi-analytical convective heat flux.
+    Notes:
+    - A known over-predictor (originally designed for pipes, treats the engine like a pipe).
+    - Very similar to Bartz (< 10% difference in the throat area).
+    - Highly accurate at the throat but decreases significantly away from it.
+    """
+    # Note: tau_lambda is divided by D_bar**1.82 to match the math logic properly
+    term1 = B * (tau_lambda / (D_bar**1.82))
+    term2 = (P_cc**0.85) / (d_th**0.15)
+    term3 = S_K_T / (Pr**0.58)
+    return term1 * term2 * term3
 
 def fin_efficiency(hc, kw, h_ch, w_fin):
     m = np.sqrt(2*hc/(kw*w_fin))

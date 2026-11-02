@@ -1,5 +1,5 @@
 from EngineParameters import *
-from Optimization.ContourCode import runContourCode
+from Optimization.ContourOptimization import setContourWeights, setContourBounds, optimizeContour
 from Geometry import Contour, CoolingChannel
 from Solvers import HotGasFlowSolver, ChannelSolver
 from Outputs import Geometry, HotGasFlow, ChannelPerformance
@@ -12,7 +12,9 @@ def main():
     # --------------------------------
     # Run contour optimization
     # --------------------------------
-    runContourCode()
+    weights = setContourWeights()
+    bounds = setContourBounds()
+    optimizeContour(weights, bounds)
 
     # --------------------------------
     # Get engine contour

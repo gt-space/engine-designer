@@ -3,10 +3,14 @@ from Functions.CoolantProperties import (get_coolant_h, get_coolant_props)
 from Functions.HeatTransfer import (coolant_htc, bartz_hg, fin_efficiency)
 from Functions.PressureDrop import dPdarcyWeisbach, dPfluidAcceleration
 from EngineParameters import mdot, MR, P_cool_out_desired
+from Geometry.Contour import getCurrentEngineParameters
+from Solvers.HotGasFlowSolver import getGasPropertiesCEA
 
 
 
 def CoolantChannelSolver(T_in_coolant, contour, channel, hot_gas):
+    gas = getGasPropertiesCEA()
+    geometry_params = getCurrentEngineParameters()
 
     #Get contour geometry
     N = contour["N"]
@@ -105,7 +109,7 @@ def CoolantChannelSolver(T_in_coolant, contour, channel, hot_gas):
             #calculate pressure error
             h_cool_array[i-1] = (h_cool_array[i] + Q/mdot_ch)
             dP_friction = dPdarcyWeisbach(Re, rho_c, Vc, ds[i-1], roughness, Dh[i])
-            dP_acceleration = dPfluidAcceleration(A_ch[i-1], A_ch[i], rho_c, mdot_ch)
+            dP_acceleration = dPfluidAcceleration(A_ch[i-1], A_ch[i], rho_c, rho_c, mdot_ch)
             #dP_areaChange = dPareaChange()
             #dP_fluidAcceleration = dPfluidAcceleration()
 
