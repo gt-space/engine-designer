@@ -2,6 +2,7 @@ from EngineParameters import Pc
 from Functions.Correlations import calculate_nusselt
 import numpy as np
 from Solvers.HotGasFlowSolver import getGasPropertiesCEA
+from Geometry.Contour import getCurrentEngineParameters
 
 # Convert chamber pressure to Pascals once
 Pc_Pa = Pc * 6894.75729
@@ -28,6 +29,8 @@ def bartz_hg(A_local, M_local,Twg):
     Pr_g = gas["Pr"]
     Cstar_actual = gas["Cstar_actual"]
 
+
+    geometry_params = getCurrentEngineParameters()
     R_t = geometry_params["R_t"] * 0.0254   # in -> m
     Rtc_Rt = geometry_params["Rtc_Rt"]
     Rtc = Rtc_Rt * R_t

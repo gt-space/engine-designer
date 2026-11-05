@@ -17,6 +17,7 @@ Rtd_Rt = 0.382          # Fixed Rao Optimal Constant
 coolant = "RP-1"
 T_cool_in = 298.15 #K, coolant inlet temperature
 P_cool_out_desired = 314*6894.75729 #Desired Pressure (Pa) of Coolant before injector, 24% injector stiffness
+d_feed_pipe = 0.75 * 0.0254  # m, Single coolant inlet feed pipe inner diameter (0.75 in)
 
 # --- 4. Other Constants ---
 wall_material = "42"
