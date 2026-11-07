@@ -13,7 +13,7 @@ def interpolateManifoldProfile(r_control_pts, N_half, shape="circular", aspect_r
     theta_ctrl = np.linspace(0.0, np.pi, n_ctrl)
     theta_stations = np.linspace(0.0, np.pi, N_half)
     
-    # PCHIP preserves monotonicity (no artificial ripples in CAD loft)
+    # PCHIP preserves monotonicity 
     spline = PchipInterpolator(theta_ctrl, r_control_pts)
     r_profile = np.maximum(spline(theta_stations), 1e-4)
     
@@ -46,22 +46,31 @@ def generateConstantVelocityInitialGuess(engine_params, n_ctrl=5, shape="circula
     return np.append(r_ctrl_0, inlet_angle_0)
 
 #Main optimization routine
-def optimizeManifold(engine_params, channel_geom, struct_params, 
-                     n_ctrl=5, shape="circular", aspect_ratio=1.0, max_iter=60):
-  
-    N_half = channel_geom['N_channels'] // 2
-    
-    # 1. Build Initial Guess Vector: x = [r_0, r_1, ..., r_{n_ctrl-1}, inlet_angle_deg]
+def optimizeManifold(engine_params, channel_geom, struct_params,
+                     n_ctrl=5, shape="circular", aspect_ratio=1.0, max_iter=25):
+
+    N_half_full = channel_geom["N_channels"] // 2
+
+    # --- 1. Coarse Network Reduction Setup ---
+    # Evaluating 45 FullFlow states for every gradient step is what caused the slow runtime.
+    # Group into <= 15 representative segments during optimization, then re-evaluate full 45 at the end.
+    N_half_opt = min(N_half_full, 15)
+    scale_factor = N_half_full / N_half_opt
+
+    fast_channel_geom = dict(channel_geom)
+    fast_channel_geom["N_channels"] = N_half_opt * 2
+    fast_channel_geom["A_ch_inlet"] = channel_geom["A_ch_inlet"] * scale_factor
+    fast_channel_geom["A_channel_avg"] = channel_geom["A_channel_avg"] * scale_factor
+
+    # --- 2. Build Initial Guess & Bounds ---
     x0 = generateConstantVelocityInitialGuess(engine_params, n_ctrl, shape, aspect_ratio)
-    
-    # 2. Set Physical Bounds
-    r_min = struct_params.get('r_min_mfg', 0.002)          # Min 2 mm radius for DMLS powder removal / machining
-    r_max = struct_params.get('max_radial_envelope', 0.04) # Max radial size
-    angle_bounds = (20.0, 90.0)                            # Inlet split half-angle [20 deg wye to 90 deg tee]
-    
+
+    r_min = struct_params.get("r_min_mfg", 0.002)
+    r_max = struct_params.get("max_radial_envelope", 0.04)
+    angle_bounds = (20.0, 90.0)
+
     bounds = [(r_min, r_max) for _ in range(n_ctrl)] + [angle_bounds]
-    
-    # History log for diagnostics and convergence plotting
+
     history = {
         "iteration": [],
         "cost": [],
@@ -71,78 +80,73 @@ def optimizeManifold(engine_params, channel_geom, struct_params,
         "inlet_angle_deg": [],
         "manifold_mass_kg": []
     }
-    
-    # Baseline scales for dimensionless cost weights
+
     dP_scale = 2.0e5  # 2 bar reference pressure scale
-    
+    R_base_man = channel_geom["R_manifold"]
+
     def objectiveFunction(x):
         r_ctrl = x[:-1]
         inlet_angle = x[-1]
-        
-        # A. Interpolate smooth manifold geometry across all channels
+
+        # A. Interpolate manifold geometry profile on fast mesh
         theta_rad, r_prof, A_prof, Dh_prof = interpolateManifoldProfile(
-            r_ctrl, N_half, shape=shape, aspect_ratio=aspect_ratio
+            r_ctrl, N_half_opt, shape=shape, aspect_ratio=aspect_ratio
         )
-        
+
         # B. Solve 1D FullFlow Fluid Network
         try:
             flow_res = fn.solveManifoldFlowNetwork(
-                A_prof, Dh_prof, inlet_angle, engine_params, channel_geom
+                A_prof, Dh_prof, inlet_angle, engine_params, fast_channel_geom
             )
         except Exception:
-            # Return heavy penalty if trial geometry causes solver divergence
             return 1e6
-            
+
         # C. Structural Wall Thickness, Mass, and Outer Envelope Penalty
-        P_peak = flow_res['P_inlet_required']
+        P_peak = flow_res["P_inlet_required"]
         t_wall = st.calcStructuralWall(
-            P_peak, r_prof, 
-            struct_params['yield_strength'], 
-            struct_params.get('safety_factor', 2.0),
-            struct_params.get('t_min_mfg', 0.0015)
+            P_peak, r_prof,
+            struct_params["yield_strength"],
+            struct_params.get("safety_factor", 2.0),
+            struct_params.get("t_min_mfg", 0.0015)
         )
-        
-        # Integrate full 360-deg ring (multiply 0->pi integral by 2)
-        theta_full = np.linspace(0.0, 2.0 * np.pi, N_half)
-        fluid_vol, metal_mass = st.calcRevolvedShellMass(
-            theta_full, r_prof, t_wall, struct_params['rho_material'], path_type="circumferential"
+
+        # Integrate full 360-deg ring (2x half-ring) with physical torus radius
+        theta_half = np.linspace(0.0, np.pi, N_half_opt)
+        _, metal_mass_half = st.calcRevolvedShellMass(
+            theta_half, r_prof, t_wall, struct_params["rho_material"],
+            path_type="circumferential", R_torus_base=R_base_man
         )
-        
+        metal_mass = 2.0 * metal_mass_half
+
         actual_protrusion = 2.0 * r_prof + t_wall
         env_penalty = st.calcEnvelopePenalty(
-            actual_protrusion, struct_params['max_radial_envelope'], weight=500.0
+            actual_protrusion, struct_params["max_radial_envelope"], weight=500.0
         )
-        
-        # D. Formulate Multi-Objective Cost Terms
-        # 1. Maldistribution penalty (Target < 0.5% variation across all cooling channels)
-        maldist_pct = flow_res['maldistribution_pct']
+
+        # D. Cost Function
+        maldist_pct = flow_res["maldistribution_pct"]
         cost_maldist = 50.0 * (maldist_pct / 1.0)**2
-        
-        # 2. End-to-End Static Pressure Uniformity (P_static(0) == P_static(180))
-        dP_end_to_end = flow_res['dP_static_end_to_end']
+
+        dP_end_to_end = flow_res["dP_static_end_to_end"]
         cost_static_flatness = 20.0 * (dP_end_to_end / 1e4)**2
-        
-        # 3. Total Pressure Drop Minimization (Inlet split + manifold + branch turn)
-        dP_tot = flow_res['dP_total']
+
+        dP_tot = flow_res["dP_total"]
         cost_dP = 5.0 * (dP_tot / dP_scale)**2
-        
-        # 4. Monotonic Taper Regularization (Prevents manifold from bulging bigger mid-stream)
+
         growth_violations = np.maximum(0.0, np.diff(r_ctrl))
         cost_taper_smoothness = 100.0 * np.sum((growth_violations / r_min)**2)
-        
-        # 5. Mass Penalty (Keeps manifold compact once flow is uniform)
+
         cost_mass = 1.0 * metal_mass
-        
+
         total_cost = (
-            cost_maldist 
-            + cost_static_flatness 
-            + cost_dP 
-            + cost_taper_smoothness 
-            + cost_mass 
+            cost_maldist
+            + cost_static_flatness
+            + cost_dP
+            + cost_taper_smoothness
+            + cost_mass
             + env_penalty
         )
-        
-        # Record iteration diagnostics
+
         history["iteration"].append(len(history["iteration"]) + 1)
         history["cost"].append(total_cost)
         history["maldistribution_pct"].append(maldist_pct)
@@ -150,46 +154,48 @@ def optimizeManifold(engine_params, channel_geom, struct_params,
         history["dP_static_diff_bar"].append(dP_end_to_end / 1e5)
         history["inlet_angle_deg"].append(inlet_angle)
         history["manifold_mass_kg"].append(metal_mass)
-        
+
         return total_cost
 
-    # 3. Run Constrained Optimization 
+    # --- 3. Run Constrained Optimization ---
     res = minimize(
         objectiveFunction,
         x0,
         method="SLSQP",
         bounds=bounds,
-        options={"maxiter": max_iter, "ftol": 1e-4, "eps": 1e-4, "disp": True}
+        options={"maxiter": max_iter, "ftol": 1e-3, "eps": 1e-3, "disp": True}
     )
-    
-    # 4. Re-evaluate Final Optimal Geometry for Output to Geometry.py
+
+    # --- 4. Re-evaluate Final Optimal Geometry on the FULL Channel Network ---
     r_ctrl_opt = res.x[:-1]
     inlet_angle_opt = res.x[-1]
-    
-    theta_rad, r_opt, A_opt, Dh_opt = interpolateManifoldProfile(
-        r_ctrl_opt, N_half, shape=shape, aspect_ratio=aspect_ratio
+
+    theta_rad_full, r_opt_full, A_opt_full, Dh_opt_full = interpolateManifoldProfile(
+        r_ctrl_opt, N_half_full, shape=shape, aspect_ratio=aspect_ratio
     )
+
     final_flow = fn.solveManifoldFlowNetwork(
-        A_opt, Dh_opt, inlet_angle_opt, engine_params, channel_geom
+        A_opt_full, Dh_opt_full, inlet_angle_opt, engine_params, channel_geom
     )
-    t_wall_opt = st.calcStructuralWall(
-        final_flow['P_inlet_required'], r_opt, 
-        struct_params['yield_strength'], 
-        struct_params.get('safety_factor', 2.0),
-        struct_params.get('t_min_mfg', 0.0015)
+
+    t_wall_opt_full = st.calcStructuralWall(
+        final_flow["P_inlet_required"], r_opt_full,
+        struct_params["yield_strength"],
+        struct_params.get("safety_factor", 2.0),
+        struct_params.get("t_min_mfg", 0.0015)
     )
-    
+
     return {
         "success": res.success,
         "message": res.message,
         "r_control_points": r_ctrl_opt,
         "inlet_angle_deg": inlet_angle_opt,
-        "theta_stations_rad": theta_rad,
-        "theta_stations_deg": np.degrees(theta_rad),
-        "r_manifold_profile": r_opt,
-        "A_manifold_profile": A_opt,
-        "Dh_manifold_profile": Dh_opt,
-        "t_wall_profile": t_wall_opt,
+        "theta_stations_rad": theta_rad_full,
+        "theta_stations_deg": np.degrees(theta_rad_full),
+        "r_manifold_profile": r_opt_full,
+        "A_manifold_profile": A_opt_full,
+        "Dh_manifold_profile": Dh_opt_full,
+        "t_wall_profile": t_wall_opt_full,
         "mdot_channels": final_flow["mdot_distribution"],
         "P_static_manifold": final_flow["P_static_manifold"],
         "maldistribution_pct": final_flow["maldistribution_pct"],

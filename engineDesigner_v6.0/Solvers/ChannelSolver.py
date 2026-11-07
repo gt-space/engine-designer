@@ -44,97 +44,101 @@ def CoolantChannelSolver(T_in_coolant, contour, channel, hot_gas):
     Twg_array = np.zeros(N) #hot-gas side wall temperature along channel
     Twc_array = np.zeros(N) # cold-gas side wall temperature along channel
 
+    # Helper to solve radial 1D thermal resistance network at any station i
+    def solve_station_thermal(i, Tc, hc, ds_local, Twg_init, Twc_init):
+        Ag = (w_ch[i] + w_fin[i]) * ds_local
+        Twg_old, Twc_old = Twg_init, Twc_init
+
+        for _ in range(400):
+            Tw_avg = 0.5 * (Twg_old + Twc_old)
+            kw = material.get("thermal_conductivity", T=Tw_avg)
+            hg = bartz_hg(A[i], M[i], Twg_old)
+
+            N_fin = fin_efficiency(hc, kw, h_ch[i], w_fin[i])
+            A_eff = (w_ch[i] + 2.0 * N_fin * h_ch[i]) * ds_local
+
+            R_g = 1.0 / (hg * Ag)
+            R_wall = tw[i] / (Ag * kw)
+            R_c = 1.0 / (hc * A_eff)
+            Q = (Taw[i] - Tc) / (R_g + R_wall + R_c)
+
+            Twg_new = Taw[i] - Q / (hg * Ag)
+            Twc_new = Tc + Q / (hc * A_eff)
+
+            if abs(Twg_new - Twg_old) < 0.01 and abs(Twc_new - Twc_old) < 0.01:
+                return Q, Q / Ag, Twg_new, Twc_new
+
+            Twg_old, Twc_old = Twg_new, Twc_new
+
+        return Q, Q / Ag, Twg_old, Twc_old
+
     #make a guess for inlet pressure
-    P_in_guess = 400*6895 #guessing 400psi + convert to Pa
+    P_in_guess = P_cool_out_desired + 40.0 * 6894.75729 #guessing 400psi + convert to Pa
 
-    for pressure_iteration in range(400):
-        P_cool_array[N-1] = P_in_guess
-        h_cool_array[N-1] = get_coolant_h(T_in_coolant, P_in_guess)
+    for _ in range(400):
+        P_cool_array[N - 1] = P_in_guess
+        h_cool_array[N - 1] = get_coolant_h(T_in_coolant, P_in_guess)
 
-        #range N is the number of axial points on the engine
-        for i in range(N-1,0,-1):
-
-            #get properties of the fluid based on pressure and enthalpy of the fluid
+        for i in range(N - 1, 0, -1):
             coolant_props = get_coolant_props(P_cool_array[i], h_cool_array[i])
-            Tc, rho_c, mu_c, k_c, cp_c, Pr_c = coolant_props.values()
+            Tc = coolant_props["T"]
+            rho_up = coolant_props["rho"]
+            mu_c = coolant_props["mu"]
+            k_c = coolant_props["k"]
+            Pr_c = coolant_props["Pr"]
 
             T_cool_array[i] = Tc
-            Vc = mdot_ch/(rho_c*A_ch[i])
-            Re = rho_c*Vc*Dh[i]/mu_c
-            hc, Nu = coolant_htc(Re, Pr_c, k_c, roughness, Dh[i])
+            Vc = mdot_ch / (rho_up * A_ch[i])
+            Re = rho_up * Vc * Dh[i] / mu_c
+            hc, _ = coolant_htc(Re, Pr_c, k_c, roughness, Dh[i])
 
-            Ag = (w_ch[i]+w_fin[i])*ds[i-1] #hot gas wall area
-        
+            Twg_init = 800.0 if i == N - 1 else Twg_array[i + 1]
+            Twc_init = 700.0 if i == N - 1 else Twc_array[i + 1]
 
-            #Make initial guess for temperature
-            if i == N-1: #use these values for first guess 
-                Twg_old = 800.0
-                Twc_old = 700.0
-            else: # Use previously solved station as initial guess
-                Twg_old = Twg_array[i+1]
-                Twc_old = Twc_array[i+1]
-            
-            for iteration in range(400):
-                Tw_avg = (Twg_old+Twc_old)/2 #using average wall temp for k wall
-                kw = material.get("thermal_conductivity", Tw_avg) #get thermal conductivity based on average wall temp
-                hg = bartz_hg(A[i], M[i], Twg_old) #calculate hg using bartz
+            Q, q_flux, Twg_conv, Twc_conv = solve_station_thermal(
+                i, Tc, hc, ds[i - 1], Twg_init, Twc_init
+            )
+            q_flux_array[i] = q_flux
+            Twg_array[i] = Twg_conv
+            Twc_array[i] = Twc_conv
 
-                N_fin = fin_efficiency(hc, kw, h_ch[i], w_fin[i]) #calculate fin efficiency
-                A_eff = (w_ch[i]+2*N_fin*h_ch[i])*ds[i-1]
+            # Update downstream enthalpy (station i-1)
+            h_cool_array[i - 1] = h_cool_array[i] + Q / mdot_ch
 
+            # Evaluate downstream density rho_down for true thermal acceleration dP
+            props_down = get_coolant_props(P_cool_array[i], h_cool_array[i - 1])
+            rho_down = props_down["rho"]
 
-                R_g = 1/(hg*Ag); #resistance, hot gas
-                R_wall = tw[i]/(Ag*kw) #resistance, wall
-                R_c = 1/(hc*A_eff) #resistance, coolant (with fin efficiency)
-                Q = (Taw[i]-Tc)/(R_g+R_wall+R_c) #Calculate heat transfer rate
-                Twg_new = Taw[i]-Q/(hg*Ag)
-                Twc_new = Tc+Q/(hc*A_eff)
+            dP_friction = dPdarcyWeisbach(Re, rho_up, Vc, ds[i - 1], roughness, Dh[i])
+            dP_acceleration = dPfluidAcceleration(A_ch[i - 1], A_ch[i], rho_down, rho_up, mdot_ch)
 
-                #Check for convergence
-                diff_Twg = abs(Twg_new-Twg_old)
-                diff_Twc = abs(Twc_new-Twc_old)
-
-                #Set new guess to calculated wall temperatures 
-                Twg_old = Twg_new
-                Twc_old = Twc_new
-
-                #break out of the iteration if converged
-                if diff_Twg <0.01 and diff_Twc <0.01:
-                    q_flux_array[i] = Q/Ag
-                    Twg_array[i] = Twg_new
-                    Twc_array[i] = Twc_new
-                    break
-
-            #update enthalpy and pressure based on inner loop iteration values
-            #calculate pressure error
-            h_cool_array[i-1] = (h_cool_array[i] + Q/mdot_ch)
-            dP_friction = dPdarcyWeisbach(Re, rho_c, Vc, ds[i-1], roughness, Dh[i])
-            dP_acceleration = dPfluidAcceleration(A_ch[i-1], A_ch[i], rho_c, rho_c, mdot_ch)
-            #dP_areaChange = dPareaChange()
-            #dP_fluidAcceleration = dPfluidAcceleration()
-
-            P_cool_array[i-1] = P_cool_array[i] - dP_friction - dP_acceleration
-            if P_cool_array[i] <= 0:
+            P_cool_array[i - 1] = P_cool_array[i] - dP_friction - dP_acceleration
+            if P_cool_array[i - 1] <= 0:
                 raise ValueError("Coolant pressure became non-positive")
 
-        #Check for convergence
-        P_cool_out = P_cool_array[0] #calculated outlet pressure
+        # Populate station i = 0 (Injector exit) so arrays have no zeros at index 0
+        props_0 = get_coolant_props(P_cool_array[0], h_cool_array[0])
+        T_cool_array[0] = props_0["T"]
+        Vc_0 = mdot_ch / (props_0["rho"] * A_ch[0])
+        Re_0 = props_0["rho"] * Vc_0 * Dh[0] / props_0["mu"]
+        hc_0, _ = coolant_htc(Re_0, props_0["Pr"], props_0["k"], roughness, Dh[0])
+        _, q_flux_array[0], Twg_array[0], Twc_array[0] = solve_station_thermal(
+            0, props_0["T"], hc_0, ds[0], Twg_array[1], Twc_array[1]
+        )
 
-        #compare calculated outlet pressure to actual outlet pressure
+        # Check outlet pressure convergence
+        P_cool_out = P_cool_array[0]
         error_Pressure = P_cool_out_desired - P_cool_out
-
-        #break out of the iteration if true
-        if abs(error_Pressure) <100: #Pa
+        if abs(error_Pressure) < 100.0:
             break
 
-        #update inlet pressure guess if not converged
-        P_in_guess = P_in_guess + error_Pressure
+        P_in_guess += error_Pressure
 
     return {
-    "P_cool": P_cool_array,
-    "h_cool": h_cool_array,
-    "T_cool": T_cool_array,
-    "q_flux": q_flux_array,
-    "Twg": Twg_array,
-    "Twc": Twc_array 
+        "P_cool": P_cool_array,
+        "h_cool": h_cool_array,
+        "T_cool": T_cool_array,
+        "q_flux": q_flux_array,
+        "Twg": Twg_array,
+        "Twc": Twc_array
     }

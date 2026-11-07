@@ -1,4 +1,31 @@
 import numpy as np
+from EngineParameters import load_matprotlib_material
+trapezoid = getattr(np, "trapezoid", getattr(np, "trapz", None))
+
+#Evaluates a temperature-dependent property across a 1D NumPy temperature array
+def queryMatPropArray(material, prop_name, T_array, fallback_val=None):
+
+    mat = load_matprotlib_material(material)
+    T_arr = np.atleast_1d(np.asarray(T_array, dtype=float))
+    out = np.zeros_like(T_arr, dtype=float)
+
+    for idx, temp_k in enumerate(T_arr):
+        try:
+            val = mat.get(prop_name, T=float(temp_k))
+            if val is None or np.isnan(val) or val <= 0.0:
+                raise ValueError
+            out[idx] = float(val)
+        except Exception:
+            try:
+                val = mat.get(prop_name)
+                out[idx] = float(val) if (val is not None and val > 0) else fallback_val
+            except Exception:
+                if fallback_val is not None:
+                    out[idx] = fallback_val
+                else:
+                    raise KeyError(f"Property '{prop_name}' not found in {mat.name}")
+
+    return out if not np.isscalar(T_array) else float(out[0])
 
 # 1. Pressure Vessel and Wall Thickness Equations
 
@@ -81,30 +108,23 @@ def calcDuctSection(shape, dim1, dim2=None):
 # 3. General Solid of Revolution Mass and Volume Integrator
 
 #Integrates metal mass and internal fluid volume along an axis of revolution.
-def calcRevolvedShellMass(path_coord, r_inner_profile, wall_thickness_profile, rho_material, path_type="axial"):
+def calcRevolvedShellMass(path_coord, r_inner_profile, wall_thickness_profile, rho_material, path_type="axial", R_torus_base=0.1):
 
     r_outer = r_inner_profile + wall_thickness_profile
-    
+    A_fluid = np.pi * r_inner_profile**2
+    A_metal = np.pi * (r_outer**2 - r_inner_profile**2)
+
     if path_type == "axial":
-        # Pappus centroid: integrate along engine axis z
-        A_fluid = np.pi * r_inner_profile**2
-        A_metal = np.pi * (r_outer**2 - r_inner_profile**2)
-        
-        fluid_volume = np.trapz(A_fluid, path_coord)
-        metal_mass = rho_material * np.trapz(A_metal, path_coord)
-        
+        fluid_volume = trapezoid(A_fluid, path_coord)
+        metal_mass = rho_material * trapezoid(A_metal, path_coord)
     elif path_type == "circumferential":
-        # Toroidal integration along theta (path_coord = theta in radians)
-        # r_inner is the duct radius, centered at centroid distance R_engine
-        # For a full ring, integrate 0 to 2*pi
-        A_fluid = np.pi * r_inner_profile**2
-        A_metal = np.pi * (r_outer**2 - r_inner_profile**2)
-        
-        fluid_volume = np.trapz(A_fluid, path_coord)
-        metal_mass = rho_material * np.trapz(A_metal, path_coord)
+        # Centroid distance of the manifold flow cross-section from the engine centerline
+        R_centroid = R_torus_base + r_inner_profile
+        fluid_volume = trapezoid(A_fluid * R_centroid, path_coord)
+        metal_mass = rho_material * trapezoid(A_metal * R_centroid, path_coord)
     else:
         raise ValueError(f"Unknown path_type: {path_type}")
-        
+
     return fluid_volume, metal_mass
 
 

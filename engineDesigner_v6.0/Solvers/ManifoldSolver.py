@@ -1,6 +1,6 @@
 import numpy as np
 from fullflow import Network, State, Component, Balance, SteadyState, DarcyWeisbach
-import PressureDrop as pd
+from Functions import PressureDrop as pd
 
 #Single feed pipe splitting into two symmetric 180-deg manifold streams at split angle alpha
 class ManifoldInletSplit(Component):

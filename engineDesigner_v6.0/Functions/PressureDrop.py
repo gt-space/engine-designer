@@ -30,7 +30,7 @@ def dPareaChange(A_up, A_down, rho, V_ref, ref_is_downstream=True):
         K_exp = (1.0 - A_up / A_down)**2
         return K_exp * 0.5 * rho * V_up**2
     elif A_down < A_up:
-        # Sudden Contraction (Idelchik, referenced to downstream higher velocity V_down)
+        # Sudden Contraction (Might relook at this to make sure this is correct)
         V_down = V_ref if ref_is_downstream else V_ref * (A_up / A_down)
         K_con = 0.5 * (1.0 - A_down / A_up)**0.75
         return K_con * 0.5 * rho * V_down**2
@@ -43,7 +43,7 @@ def dPfluidAcceleration(A_down, A_up, rho_down, rho_up, mdot_ch):
     
     # Reversible Bernoulli static pressure change due to area change
     dP_area = (mdot_ch**2 / (2.0 * rho_avg)) * (1.0 / A_down**2 - 1.0 / A_up**2)
-    # Momentum pressure drop due to thermal expansion (density decrease along channel)
+    # Momentum pressure drop due to thermal expansion 
     dP_thermal = (mdot_ch / A_avg)**2 * (1.0 / rho_down - 1.0 / rho_up)
     return dP_area + dP_thermal
 
@@ -117,7 +117,7 @@ def dPchannelBranch(mdot_man_local, mdot_ch, A_man_local, A_ch_inlet, rho, K_ent
     dP_contract = dPareaChange(A_man_local, A_ch_inlet, rho, V_ch, ref_is_downstream=True)
     
     # 3. Reversible Bernoulli static-to-dynamic conversion entering the channel
-    dP_bernoulli_entry = 0.5 * rho * V_ch**2 * (1.0 + K_entry_base)
+    dP_bernoulli_entry = 0.5 * rho * (V_ch**2 - V_man**2)
     
     return dP_turn + dP_contract + dP_bernoulli_entry
 

@@ -1,4 +1,4 @@
-import math
+
 import numpy as np
 from Functions.PressureDrop import darcyWeishbachFriction
 
@@ -31,7 +31,7 @@ def lennard_jones_viscosity(W_i, T, sigma_i, epsilon_i):
     omega_mu = 1.147 * (T_star**-0.145) + (T_star + 0.5)**-2 
     
     # Dynamic Viscosity output [cite: 1605, 1607]
-    return 2.6693e-6 * math.sqrt(W_i * T) / ((sigma_i**2) * omega_mu)
+    return 2.6693e-6 * np.sqrt(W_i * T) / ((sigma_i**2) * omega_mu)
 
 
 # ==========================================
@@ -53,7 +53,7 @@ def kays_laminar(D, L, Re, Pr, mu, mu_w):
     Notes: Valid only for small temperature differences between wall and bulk.
     """
     term1 = (0.036 * Re * Pr) / (L / D)
-    term2 = math.log((L / D) / (0.0011 * Re * Pr) + 1)
+    term2 = np.log((L / D) / (0.0011 * Re * Pr) + 1)
     return 4.36 + term1 * term2 * ((mu / mu_w)**0.14)
 
 def colburn_mixed(Re, Pr, D, L, mu, mu_w, Gr):
@@ -108,7 +108,7 @@ def sieder_tate_turbulent(Re, Pr, mu, mu_w):
 def sleicher_rouse_turbulent(Re, Pr):
     """Sleicher and Rouse correlation. Over-predictor (deviations 3.1% to 21.9%)."""
     a = 0.88 - (0.24 / (4 + Pr))
-    b = 0.333 + 0.5 * math.exp(-0.6 * Pr)
+    b = 0.333 + 0.5 * np.exp(-0.6 * Pr)
     return 5 + 0.015 * (Re**a) * (Pr**b)
 
 def petukhov_popov_turbulent(Re, Pr, mu, mu_w, heating=True):
@@ -116,7 +116,7 @@ def petukhov_popov_turbulent(Re, Pr, mu, mu_w, heating=True):
     Petukhov and Popov correlation for variable physical properties.
     Notes: Set heating=True (n=0.11) when T_wall > T_bulk; False (n=0.25) for cooling.
     """
-    f = (1.82 * math.log10(Re) - 1.64)**-2
+    f = (1.82 * np.log10(Re) - 1.64)**-2
     a = 1.07 + 12.7 * (Pr**(2/3) - 1) * (f / 8)**0.5
     n = 0.11 if heating else 0.25 
     return ((Re * Pr * (f / 8)) / a) * ((mu / mu_w)**n)
@@ -158,7 +158,7 @@ def churchill_turbulent_a(Re, Pr):
     Churchill correlation variant A.
     Notes: Underpredicts data heavily (40-80%) for Re < 4000. Depends on inlet geometry.
     """
-    f_05 = 1 / (2.21 * math.log(Re / 7))
+    f_05 = 1 / (2.21 * np.log(Re / 7))
     numerator = 0.079 * f_05 * Re * Pr
     denominator = (1 + Pr**-0.8)**(5/6)
     return 6.3 + (numerator / denominator)

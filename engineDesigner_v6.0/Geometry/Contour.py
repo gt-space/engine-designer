@@ -1,6 +1,7 @@
 import json
 import numpy as np
 import shutil
+from scipy.optimize import brentq
 import pandas as pd
 from pathlib import Path
 from scipy.interpolate import PchipInterpolator
@@ -16,15 +17,17 @@ def solidCylVol(D, L):
     return np.pi * (D / 2)**2 * L
 
 # Finds the chamber length (Lc) that results in the target chamber volume (Vc).
+
 def search_Lc(Vc, geo):
-    
-    L = np.linspace(0, 30, 10000)
-    dV = 0.05 
-    for l_val in L:
-        geo.reset_attr('LchamberInp', l_val)
-        if abs(Vc - geo.Vcham) < dV:
-            return geo.Lcham_cyl
-    return None 
+    def vol_residual(l_val):
+        geo.reset_attr('LchamberInp', float(l_val))
+        return geo.Vcham - Vc
+
+    try:
+        brentq(vol_residual, 0.1, 30.0, xtol=1e-3)
+        return geo.Lcham_cyl
+    except ValueError:
+        return 8.0
 
 # Calculates total volume and surface area for a candidate engine contour.
 def evaluateContourGeometry(R_t, eps, eps_c, Rtd_Rt, Lc, theta_c, Lf, Rtc):

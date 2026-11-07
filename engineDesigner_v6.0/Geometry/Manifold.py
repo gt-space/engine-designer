@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.interpolate import PchipInterpolator
-
+from pathlib import Path
 import EngineParameters as ep
 from Functions.CoolantProperties import get_coolant_h, get_coolant_props
 import Functions.Structural as st
@@ -18,7 +18,7 @@ def extractManifoldChannelInterface(contour, channel, coolant_flow=None):
     z_manifold = float(contour["z"][-1])
     A_ch_inlet = float(channel["A_ch"][-1])
     
-    # If ChannelSolver was already run, calibrate f_channel to match its exact dP!
+    
     if coolant_flow is not None:
         dP_ch_actual = float(coolant_flow["P_cool"][-1] - coolant_flow["P_cool"][0])
         mdot_f = ep.mdot / (1.0 + ep.MR)
@@ -138,7 +138,16 @@ def build3DCADManifoldLoft(opt_results, channel_geom, n_cad_angles=361, n_sectio
     }
 
 #Export to CSV
-def exportManifoldGeometryToCSV(cad_data, opt_results, filename="Geometry/Manifold_CAD_Loft_Table.csv"):
+def exportManifoldGeometryToCSV(cad_data, opt_results, filename=None):
+    if filename is None:
+        output_path = Path(__file__).resolve().parent / "Manifold_CAD_Loft_Table.csv"
+    else:
+        output_path = Path(filename)
+        if not output_path.is_absolute():
+            output_path = Path(__file__).resolve().parent / output_path.name
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
     header = (
         f"Optimized Single-Inlet Regen Manifold Loft Table | "
         f"Optimal Inlet Wye Half-Angle: {opt_results['inlet_angle_deg']:.2f} deg | "
@@ -164,5 +173,5 @@ def exportManifoldGeometryToCSV(cad_data, opt_results, filename="Geometry/Manifo
         area_mm2
     ))
     
-    np.savetxt(filename, table, delimiter=",", header=header, comments="# ", fmt="%.5f")
-    print(f"[Geometry] Saved 360-deg CAD Loft Table to: {filename}")
+    np.savetxt(str(output_path), table, delimiter=",", header=header, comments="# ", fmt="%.5f")
+    print(f"[Geometry] Saved 360-deg CAD Loft Table to: {output_path}")
