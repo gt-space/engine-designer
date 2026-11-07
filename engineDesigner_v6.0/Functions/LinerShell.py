@@ -109,7 +109,8 @@ def calcShellThermalThickness(P_cool, r_shell_inner, t_liner, h_ch, f_fin,
     sigma_allow_shell = np.maximum(sigma_y_shell / safety_factor, 1e6)
 
     stiffness_ratio = E_liner / np.maximum(E_shell, 1e9)
-    thermal_line_load = (E_liner * t_liner_eff * d_eps_th) / (1.0 + 0.5 * stiffness_ratio)
+    # Coaxial compliance factor (prevents over-predicting thickness when E_liner == E_shell)
+    thermal_line_load = 0.25 * (E_liner * t_liner_eff * d_eps_th) / (1.0 + stiffness_ratio)
     pressure_axial_line_load = 0.5 * P_cool * r_shell_inner
 
     t_shell_thermal = (thermal_line_load + pressure_axial_line_load) / sigma_allow_shell
