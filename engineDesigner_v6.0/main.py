@@ -37,8 +37,8 @@ def main():
     optimizeContour(weights, bounds)
 
     # 2. Get engine contour
-    N = 120
-    contour = Contour.getCurrentContour(N)
+    N = 240
+    contour = Contour.getCurrentContour(N, smooth=True)
 
     # 3. Get hot gas flow
     hot_gas = HotGasFlowSolver.getHotGasFlow(contour)
@@ -75,6 +75,20 @@ def main():
     )
     exportSolidWorksCurveFiles(contour, struct_results["liner"], struct_results["shell"])
 
+    # Export Full Liner + Channel + Outer Shell CAD Table, XYZ Curves, and SolidWorks DXF Sketch
+    LinerShell.exportLinerShellCADToCSV(
+        contour, channel, struct_results["liner"], struct_results["shell"]
+    )
+    exportSolidWorksCurveFiles(contour, struct_results["liner"], struct_results["shell"])
+    Contour.exportContourToSolidWorksDXF(
+        contour, shell_geom=struct_results["shell"], units="mm"
+    )
+
+    #Contour no thickness HUNTER
+    Contour.exportContourToSolidWorksDXF(
+        contour, shell_geom=struct_results["shell"], units="mm"
+    )
+    Contour.exportInnerContourOnlyDXF(contour, units="mm")
     # 6. Optimize Single-Inlet Tapered Manifold coupled to ChannelSolver results
     manifold_channel_geom = Manifold.extractManifoldChannelInterface(contour, channel, coolant_flow)
     manifold_struct_params = Manifold.setManifoldSizeLimitsFromContour(contour, channel)
