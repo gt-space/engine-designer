@@ -10,54 +10,7 @@ from rocketisp.geometry import Geometry
 from scipy.interpolate import griddata
 from Data.rao_data import theta_e_data, theta_n_data
 
-#Smooths raw discrete contour points using a curvature-continuous cubic spline
-def _smooth_contour_profile(z_raw, r_raw, n_dense=500, smoothing_factor=1e-6):
 
-    # Remove any duplicate Z coordinates if present
-    _, unique_idx = np.unique(z_raw, return_index=True)
-    z_clean = z_raw[np.sort(unique_idx)]
-    r_clean = r_raw[np.sort(unique_idx)]
-
-    # Split at the throat so the throat minimum is never shifted or clipped by smoothing
-    i_throat = int(np.argmin(r_clean))
-    z_t, r_t = z_clean[i_throat], r_clean[i_throat]
-
-    # 1. Converging section (Chamber end -> Throat)
-    z_conv = z_clean[:i_throat + 1]
-    r_conv = r_clean[:i_throat + 1]
-    if len(z_conv) > 4:
-        # Weight endpoints heavily to preserve exact chamber and throat tangency/values
-        w_conv = np.ones_like(z_conv)
-        w_conv[0] = 1e4
-        w_conv[-1] = 1e4
-        spl_conv = UnivariateSpline(z_conv, r_conv, w=w_conv, s=smoothing_factor)
-        z_conv_dense = np.linspace(z_conv[0], z_t, max(n_dense // 2, 100))
-        r_conv_dense = spl_conv(z_conv_dense)
-        r_conv_dense[0] = r_conv[0]
-        r_conv_dense[-1] = r_t
-    else:
-        z_conv_dense = z_conv
-        r_conv_dense = r_conv
-
-    # 2. Diverging bell nozzle section (Throat -> Exit)
-    z_div = z_clean[i_throat:]
-    r_div = r_clean[i_throat:]
-    if len(z_div) > 4:
-        w_div = np.ones_like(z_div)
-        w_div[0] = 1e4
-        w_div[-1] = 1e4
-        spl_div = UnivariateSpline(z_div, r_div, w=w_div, s=smoothing_factor)
-        z_div_dense = np.linspace(z_t, z_div[-1], max(n_dense // 2, 150))
-        r_div_dense = spl_div(z_div_dense)
-        r_div_dense[0] = r_t
-        r_div_dense[-1] = r_div[-1]
-    else:
-        z_div_dense = z_div
-        r_div_dense = r_div
-
-    z_smooth = np.concatenate((z_conv_dense[:-1], z_div_dense))
-    r_smooth = np.concatenate((r_conv_dense[:-1], r_div_dense))
-    return z_smooth, r_smooth
 
 # --- 1. Contour Geometry Calcs--- (Will allow us to set dX manually later)
 
@@ -118,6 +71,11 @@ def saveOptimizedContour(R_t, eps, eps_c, Rtd_Rt, Lc_opt, theta_c_opt, Lf_opt, R
     theta_n_deg = float(griddata(theta_n_data[:, :2], theta_n_data[:, 2], (Lf_opt, eps), method='linear'))
     theta_e_deg = float(griddata(theta_e_data[:, :2], theta_e_data[:, 2], (Lf_opt, eps), method='linear'))
 
+    if np.isnan(theta_n_deg):
+        theta_n_deg = float(griddata(theta_n_data[:, :2], theta_n_data[:, 2], (Lf_opt, eps), method='nearest'))
+    if np.isnan(theta_e_deg):
+        theta_e_deg = float(griddata(theta_e_data[:, :2], theta_e_data[:, 2], (Lf_opt, eps), method='nearest'))
+
     geometry_dir = Path(__file__).parent
     noz_opt = G_opt.getNozObj()
 
@@ -148,6 +106,55 @@ def saveOptimizedContour(R_t, eps, eps_c, Rtd_Rt, Lc_opt, theta_c_opt, Lf_opt, R
     return parameters
 
 # --- 2. GET CONTINUOUS CONTOUR --- (Will allow us to set dX manually later)
+#Smooths raw discrete contour points using a curvature-continuous cubic spline
+def _smooth_contour_profile(z_raw, r_raw, n_dense=500, smoothing_factor=1e-6):
+
+    # Remove any duplicate Z coordinates if present
+    _, unique_idx = np.unique(z_raw, return_index=True)
+    z_clean = z_raw[np.sort(unique_idx)]
+    r_clean = r_raw[np.sort(unique_idx)]
+
+    # Split at the throat so the throat minimum is never shifted or clipped by smoothing
+    i_throat = int(np.argmin(r_clean))
+    z_t, r_t = z_clean[i_throat], r_clean[i_throat]
+
+    # 1. Converging section (Chamber end -> Throat)
+    z_conv = z_clean[:i_throat + 1]
+    r_conv = r_clean[:i_throat + 1]
+    if len(z_conv) > 4:
+        # Weight endpoints heavily to preserve exact chamber and throat tangency/values
+        w_conv = np.ones_like(z_conv)
+        w_conv[0] = 1e4
+        w_conv[-1] = 1e4
+        spl_conv = UnivariateSpline(z_conv, r_conv, w=w_conv, s=smoothing_factor)
+        z_conv_dense = np.linspace(z_conv[0], z_t, max(n_dense // 2, 100))
+        r_conv_dense = spl_conv(z_conv_dense)
+        r_conv_dense[0] = r_conv[0]
+        r_conv_dense[-1] = r_t
+    else:
+        z_conv_dense = z_conv
+        r_conv_dense = r_conv
+
+    # 2. Diverging bell nozzle section (Throat -> Exit)
+    z_div = z_clean[i_throat:]
+    r_div = r_clean[i_throat:]
+    if len(z_div) > 4:
+        w_div = np.ones_like(z_div)
+        w_div[0] = 1e4
+        w_div[-1] = 1e4
+        spl_div = UnivariateSpline(z_div, r_div, w=w_div, s=smoothing_factor)
+        z_div_dense = np.linspace(z_t, z_div[-1], max(n_dense // 2, 150))
+        r_div_dense = spl_div(z_div_dense)
+        r_div_dense[0] = r_t
+        r_div_dense[-1] = r_div[-1]
+    else:
+        z_div_dense = z_div
+        r_div_dense = r_div
+
+    z_smooth = np.concatenate((z_conv_dense[:-1], z_div_dense))
+    r_smooth = np.concatenate((r_conv_dense[:-1], r_div_dense))
+    return z_smooth, r_smooth
+
 def getCurrentContour(N, smooth=True):
     contour_file = Path(__file__).parent / "current_contour.csv"
     data = pd.read_csv(contour_file)

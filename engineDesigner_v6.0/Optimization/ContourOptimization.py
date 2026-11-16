@@ -35,9 +35,14 @@ def setContourBounds(
     Lstar_range=(40.0, 50.0),
     Lf_range=(60.0, 100.0),
     Rtc_range=(0.5, 1.5),
-    D_c=6.5,
-    Rtd_Rt=0.382
+    D_c=None,
+    Rtd_Rt=None
 ):
+    if D_c is None:
+        D_c = ep.D_c
+    if Rtd_Rt is None:
+        Rtd_Rt = ep.Rtd_Rt
+
     # Returns geometric bounds and fixed contour constants.
     return {
         "theta_c_range": theta_c_range,
@@ -89,11 +94,17 @@ def optimizeContour(weights=None, geo_bounds=None):
     # 3. Define Cost Function using the weights 
     def cost_function(x):
         Lc, theta_c_val, Lf_val, Rtc_val = x
-        vol, surf = evaluateContourGeometry(R_t, eps, eps_c, Rtd_Rt, Lc, theta_c_val, Lf_val, Rtc_val)
+        try:
+            vol, surf = evaluateContourGeometry(
+                R_t, eps, eps_c, Rtd_Rt, Lc, theta_c_val, Lf_val, Rtc_val
+            )
+        except Exception:
+            return 1e6
 
-        weight_pen = 5.0 * Lc if Lc > 10.0 else 0.0
+        # Smooth, continuous proxies proportional to material volume / surface area
+        weight_pen = surf * (ep.Pc / 1000.0)   # Scales with pressure-vessel wall mass
+        price = surf                            # Material + machining/AM cost scales with surface area
         manufacturability = 1.0
-        price = 2.0 * Lc
         line_loss = 1.0 + 0.54 / (eps_c**2)
         thrust_penalty = (100.0 - Lf_val) / 100.0
         cd_penalty = (3.0 - Rtc_val) / 3.0
@@ -111,7 +122,8 @@ def optimizeContour(weights=None, geo_bounds=None):
 
     # 4. Run Optimizer
     x0 = np.array([8.0, 37.5, 80.0, 1.5])
-    result = minimize(cost_function, x0, bounds=bounds, method="SLSQP")
+    # In Optimization/ContourOptimization.py (line 114):
+    result = minimize(cost_function, x0, bounds=bounds, method="SLSQP", options={"eps": 1e-2})
     Lc_opt, theta_c_opt, Lf_opt, Rtc_opt = np.around(result.x, 1)
 
     # 5. Save and Return

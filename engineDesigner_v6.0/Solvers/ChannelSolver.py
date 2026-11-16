@@ -2,7 +2,7 @@ import numpy as np
 from Functions.CoolantProperties import (get_coolant_h, get_coolant_props)
 from Functions.HeatTransfer import (coolant_htc, bartz_hg, fin_efficiency)
 from Functions.PressureDrop import dPdarcyWeisbach, dPfluidAcceleration
-from EngineParameters import mdot, MR, P_cool_out_desired
+from EngineParameters import mdot_fuel, P_cool_out_desired
 from Geometry.Contour import getCurrentEngineParameters
 from Solvers.HotGasFlowSolver import getGasPropertiesCEA
 
@@ -33,8 +33,7 @@ def CoolantChannelSolver(T_in_coolant, contour, channel, hot_gas):
     Taw = hot_gas["Taw"]
 
     #get channel flow rate
-    mdot_f = mdot / (1 + MR)
-    mdot_ch = mdot_f/N_ch
+    mdot_ch = mdot_fuel/N_ch
 
     #Setup Arrays to calculate thermo-fluid properties at every station along the channel
     P_cool_array = np.zeros(N) #pressure along channel

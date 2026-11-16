@@ -35,14 +35,15 @@ class EngineConfig:
     oxidizer: str = "LOX"
 
     # --- 2. Operating Conditions ---
-    Pc: float = 261.6              # psia, Chamber Pressure
-    Pe: float = 11.0               # psia, Exit Pressure
-    T_target: float = 3597.0       # lbf, Target Actual Thrust
-    MR: float = 2.1                # Mixture Ratio (O/F)
-    Cstar_eff: float = 0.85        # C* Efficiency
+    Pc: float = 255.26              # psia, Chamber Pressure
+    Pe: float = 8.57               # psia, Exit Pressure
+    T_target: float = 5885       # lbf, Target Actual Thrust
+    MR: float = 2.174                # Mixture Ratio (O/F)
+    Cstar_eff: float = 0.9        # C* Efficiency
     Cf_eff: float = 0.95           # Cf Efficiency
-    mdot: float = 7.95             # kg/s, Total Mass Flow Rate
-    D_c: float = 6.5               # in, Chamber / Injector Diameter
+    mdot_fuel: float = 3.719             # kg/s, Fuel Mass Flow Rate
+    mdot_lox: float =8.085              # kg/s, LOX Mass Flow Rate
+    D_c: float = 8.2               # in, Chamber / Injector Diameter
     Rtd_Rt: float = 0.382          # Fixed Rao Downstream Throat Fillet Ratio
 
     # --- 3. Coolant Conditions ---
@@ -67,8 +68,8 @@ class EngineConfig:
         return self.Pc * 6894.75729
 
     @property
-    def mdot_fuel(self) -> float:
-        return self.mdot / (1.0 + self.MR)
+    def mdot_total(self) -> float:
+        return self.mdot_fuel + self.mdot_lox
 
     @property
     def A_feed_pipe(self) -> float:
@@ -101,7 +102,9 @@ T_target = ENGINE_CONFIG.T_target
 MR = ENGINE_CONFIG.MR
 Cstar_eff = ENGINE_CONFIG.Cstar_eff
 Cf_eff = ENGINE_CONFIG.Cf_eff
-mdot = ENGINE_CONFIG.mdot
+mdot_fuel = ENGINE_CONFIG.mdot_fuel
+mdot_lox = ENGINE_CONFIG.mdot_lox
+mdot = ENGINE_CONFIG.mdot_total
 D_c = ENGINE_CONFIG.D_c
 Rtd_Rt = ENGINE_CONFIG.Rtd_Rt
 

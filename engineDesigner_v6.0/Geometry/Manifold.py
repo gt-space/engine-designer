@@ -22,7 +22,7 @@ def extractManifoldChannelInterface(contour, channel, coolant_flow=None):
     if coolant_flow is not None:
         dP_ch_actual = float(coolant_flow["P_cool"][-1] - coolant_flow["P_cool"][0])
         mdot_f = ep.mdot / (1.0 + ep.MR)
-        mdot_ch_nom = mdot_f / N_ch
+        mdot_ch_nom = ep.mdot_fuel / N_ch
         P_in_ch = float(coolant_flow["P_cool"][-1])
         h_in = get_coolant_h(ep.T_cool_in, P_in_ch)
         rho_in = get_coolant_props(P_in_ch, h_in)["rho"]
@@ -62,7 +62,7 @@ def setManifoldSizeLimitsFromContour(contour, channel=None, max_outer_radius_rat
 
 #Load fuel coolant mdot and fluid props
 def loadEngineCoolantParameters(coolant_flow=None, mdot_override=None):
-    mdot_fuel = mdot_override if mdot_override is not None else (ep.mdot / (1.0 + ep.MR))
+    mdot_fuel = mdot_override if mdot_override is not None else ep.mdot_fuel
     
     d_feed_pipe = getattr(ep, "d_feed_pipe", 0.75 * 0.0254)
     A_feed_pipe = 0.25 * np.pi * d_feed_pipe**2
