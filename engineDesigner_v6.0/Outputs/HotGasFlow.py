@@ -56,3 +56,4 @@ def plotHotGasFlow(contour, hot_gas):
     axs[1, 2].grid()
 
     plt.tight_layout()
+  

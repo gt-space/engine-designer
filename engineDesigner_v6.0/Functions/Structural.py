@@ -108,17 +108,19 @@ def calcDuctSection(shape, dim1, dim2=None):
 # 3. General Solid of Revolution Mass and Volume Integrator
 
 #Integrates metal mass and internal fluid volume along an axis of revolution.
-def calcRevolvedShellMass(path_coord, r_inner_profile, wall_thickness_profile, rho_material, path_type="axial", R_torus_base=0.1):
-
+def calcRevolvedShellMass(path_coord, r_inner_profile, wall_thickness_profile, rho_material,
+                          path_type="axial", R_torus_base=0.1, fill_fraction=1.0):
     r_outer = r_inner_profile + wall_thickness_profile
     A_fluid = np.pi * r_inner_profile**2
-    A_metal = np.pi * (r_outer**2 - r_inner_profile**2)
+    A_metal = np.pi * (r_outer**2 - r_inner_profile**2) * fill_fraction
 
     if path_type == "axial":
+        # Account for local wall slope ds/dz
+        dr_dz = np.gradient(r_inner_profile, path_coord)
+        slope_factor = np.sqrt(1.0 + dr_dz**2)
         fluid_volume = trapezoid(A_fluid, path_coord)
-        metal_mass = rho_material * trapezoid(A_metal, path_coord)
+        metal_mass = rho_material * trapezoid(A_metal * slope_factor, path_coord)
     elif path_type == "circumferential":
-        # Centroid distance of the manifold flow cross-section from the engine centerline
         R_centroid = R_torus_base + r_inner_profile
         fluid_volume = trapezoid(A_fluid * R_centroid, path_coord)
         metal_mass = rho_material * trapezoid(A_metal * R_centroid, path_coord)

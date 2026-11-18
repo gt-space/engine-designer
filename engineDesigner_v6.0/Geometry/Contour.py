@@ -64,9 +64,10 @@ def evaluateContourGeometry(R_t, eps, eps_c, Rtd_Rt, Lc, theta_c, Lf, Rtc):
 def saveOptimizedContour(R_t, eps, eps_c, Rtd_Rt, Lc_opt, theta_c_opt, Lf_opt, Rtc_opt):
     G_opt = Geometry(
         Rthrt=R_t, CR=eps_c, RupThroat=Rtc_opt, 
-        RchmConv=Rtc_opt, cham_conv_deg=theta_c_opt, LchamberInp=Lc_opt,
+        RchmConv=Rtc_opt, cham_conv_deg=theta_c_opt, LchamberInp=10,
         RdwnThroat=Rtd_Rt, eps=eps, pcentBell=Lf_opt
     )
+    G_opt.reset_attr('LchamberInp', float(Lc_opt + G_opt.Lcham_conv))
 
     theta_n_deg = float(griddata(theta_n_data[:, :2], theta_n_data[:, 2], (Lf_opt, eps), method='linear'))
     theta_e_deg = float(griddata(theta_e_data[:, :2], theta_e_data[:, 2], (Lf_opt, eps), method='linear'))
@@ -337,7 +338,7 @@ def exportInnerContourOnlyDXF(contour, filename=None, units="mm"):
     out_path.write_text("\n".join(lines), encoding="ascii")
     print(f"[Geometry] Saved Inner-Contour-Only DXF Sketch to: {out_path}")
     return out_path
-# --- 4. UPLOAD GEOMETRY TO DESIGN DATABASE --- (Manually Upload If Design Is Good)
+# --- 4. UPLOAD GEOMETRY TO DESIGN DATABASE --- 
 # Save a copy of contour parameters JSON file to next Design # Folder
 # Save a copy of Optimized Contour CSV file to next Design # Folder
 def uploadToDesigns():

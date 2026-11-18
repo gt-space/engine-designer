@@ -21,7 +21,6 @@ def extractManifoldChannelInterface(contour, channel, coolant_flow=None):
     
     if coolant_flow is not None:
         dP_ch_actual = float(coolant_flow["P_cool"][-1] - coolant_flow["P_cool"][0])
-        mdot_f = ep.mdot / (1.0 + ep.MR)
         mdot_ch_nom = ep.mdot_fuel / N_ch
         P_in_ch = float(coolant_flow["P_cool"][-1])
         h_in = get_coolant_h(ep.T_cool_in, P_in_ch)
@@ -43,19 +42,21 @@ def extractManifoldChannelInterface(contour, channel, coolant_flow=None):
     }
 
 #Sets Manifold Limits based on contour and structural properties
-def setManifoldSizeLimitsFromContour(contour, channel=None, max_outer_radius_ratio=1.35, min_mfg_radius=0.0025):
+def setManifoldSizeLimitsFromContour(contour, channel=None, max_outer_radius_ratio=1.35, min_mfg_radius=0.0015):
     r_array = contour["r"]
     r_max_contour = float(np.max(r_array))
     r_at_manifold = float(r_array[-1])
     
     max_outer_envelope_radius = r_max_contour * max_outer_radius_ratio
     max_radial_protrusion = max(max_outer_envelope_radius - r_at_manifold, 0.015)
-    
+    mat = ep.ENGINE_CONFIG.shell_material
+    sigma_y = st.queryMatPropArray(mat, "yield_strength", ep.T_cool_in, fallback_val=450e6)
+    rho_mat = float(mat.get("density"))
     return {
-        "yield_strength": 450e6,
-        "rho_material": 8400.0,
-        "safety_factor": 2.0,
-        "t_min_mfg": 0.0015,
+        "yield_strength": float(sigma_y),
+        "rho_material": rho_mat,
+        "safety_factor": ep.SF_structural,
+        "t_min_mfg": ep.t_shell_min_mfg,
         "r_min_mfg": min_mfg_radius,
         "max_radial_envelope": max_radial_protrusion
     }

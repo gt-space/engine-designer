@@ -59,11 +59,12 @@ def solveRegenStructuralShells(contour, channel, hot_gas, coolant_flow=None,
     _, mass_liner = calcRevolvedShellMass(
         contour["z"], contour["r"], channel_work["tw"], rho_liner, path_type="axial"
     )
+    # Replace lines 59-62 in Solvers/StructuralSolver.py:
     r_rib_in = contour["r"] + channel_work["tw"]
-    _, mass_ribs_full = calcRevolvedShellMass(
-        contour["z"], r_rib_in, channel_work["h_ch"], rho_liner, path_type="axial"
+    _, mass_ribs = calcRevolvedShellMass(
+        contour["z"], r_rib_in, channel_work["h_ch"], rho_liner,
+        path_type="axial", fill_fraction=channel_work["f_fin"]
     )
-    mass_ribs = mass_ribs_full * float(np.mean(channel_work["f_fin"]))
 
     _, mass_shell = calcRevolvedShellMass(
         contour["z"], shell_geom["r_shell_inner"], shell_geom["t_shell_selected"], rho_shell, path_type="axial"

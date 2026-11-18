@@ -83,11 +83,6 @@ def main():
     Contour.exportContourToSolidWorksDXF(
         contour, shell_geom=struct_results["shell"], units="mm"
     )
-
-    #Contour no thickness HUNTER
-    Contour.exportContourToSolidWorksDXF(
-        contour, shell_geom=struct_results["shell"], units="mm"
-    )
     Contour.exportInnerContourOnlyDXF(contour, units="mm")
     # 6. Optimize Single-Inlet Tapered Manifold coupled to ChannelSolver results
     manifold_channel_geom = Manifold.extractManifoldChannelInterface(contour, channel, coolant_flow)
@@ -130,13 +125,27 @@ def main():
     print(f"Channel Flow Maldistribution:{manifold_opt['maldistribution_pct']:.3f} %")
     print(f"Total Feed In Pressure Req:  {manifold_opt['P_inlet_required_Pa']*0.000145038:.2f} psi")
 
-    # 8. Plot all outputs
-    PlotGeometry.plotGeometry(contour, channel)
-    HotGasFlow.plotHotGasFlow(contour, hot_gas)
-    ChannelPerformance.plotChannelPerformance(contour, hot_gas, coolant_flow)
-    Structural.plotStructuralSizing(contour, struct_results)
-    ManifoldPerformance.plotManifoldResults(contour, manifold_opt, cad_loft)
 
+    # 8. Plot and save all outputs
+    plots_dir = Path(__file__).resolve().parent / "Plots"
+    plots_dir.mkdir(parents=True, exist_ok=True)
+
+    PlotGeometry.plotGeometry(contour, channel)
+    plt.savefig(plots_dir / "1_Geometry.png", dpi=300, bbox_inches="tight")
+
+    HotGasFlow.plotHotGasFlow(contour, hot_gas)
+    plt.savefig(plots_dir / "2_HotGasFlow.png", dpi=300, bbox_inches="tight")
+
+    ChannelPerformance.plotChannelPerformance(contour, hot_gas, coolant_flow)
+    plt.savefig(plots_dir / "3_ChannelPerformance.png", dpi=300, bbox_inches="tight")
+
+    Structural.plotStructuralSizing(contour, struct_results)
+    plt.savefig(plots_dir / "4_StructuralSizing.png", dpi=300, bbox_inches="tight")
+
+    ManifoldPerformance.plotManifoldResults(contour, manifold_opt, cad_loft)
+    plt.savefig(plots_dir / "5_ManifoldPerformance.png", dpi=300, bbox_inches="tight")
+
+    print(f"[Outputs] Saved all 5 plots to {plots_dir}")
     plt.show()
 
 

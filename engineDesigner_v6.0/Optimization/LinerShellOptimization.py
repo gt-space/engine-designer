@@ -6,10 +6,10 @@ from Solvers.StructuralSolver import solveRegenStructuralShells
 from Functions.Structural import calcRevolvedShellMass
 
 #Finds the minimum-mass smooth PCHIP spline thickness schedules for both the inner liner and outer closeout shell
+# In Optimization/LinerShellOptimization.py (lines 8-35):
 def optimizeLinerAndShellProfiles(contour, channel, hot_gas, coolant_flow=None,
-                                  liner_material=None, shell_material=None, n_ctrl=5):
+                                  liner_material=None, shell_material=None, n_ctrl=9):
     
-    # 1. Solve baseline exact station-by-station requirements
     base_res = solveRegenStructuralShells(
         contour, channel, hot_gas, coolant_flow,
         liner_material=liner_material, shell_material=shell_material,
@@ -27,17 +27,30 @@ def optimizeLinerAndShellProfiles(contour, channel, hot_gas, coolant_flow=None,
     rho_liner = float(base_res["liner"]["material"].get("density"))
     rho_shell = float(base_res["shell"]["material"].get("density"))
 
-    # Control stations anchored at chamber start, pre-throat, throat, post-throat, exit
+    # Cluster control stations around the converging section and throat
     throat_idx = contour["throat_index"]
-    ctrl_indices = np.unique(np.linspace(0, len(z) - 1, n_ctrl, dtype=int))
-    if throat_idx not in ctrl_indices:
-        ctrl_indices = np.sort(np.append(ctrl_indices[:-1], throat_idx))
+    conv_idx = int(np.argmax(r_gas < r_gas[0] - 1e-5))
+    base_indices = np.linspace(0, len(z) - 1, n_ctrl, dtype=int)
+    key_indices = [
+        0,
+        max(conv_idx - 5, 1),
+        conv_idx + 5,
+        max(throat_idx - 10, 1),
+        throat_idx,
+        min(throat_idx + 12, len(z) - 2),
+        len(z) - 1
+    ]
+    ctrl_indices = np.unique(np.concatenate([base_indices, key_indices]))
     z_ctrl = z[ctrl_indices]
 
     def optimize_single_wall(t_req_array, r_base_array, rho_mat, t_upper_array=None):
-        x0 = t_req_array[ctrl_indices] * 1.05
-        bounds = [(float(t_req_array[idx]), float(t_upper_array[idx]) if t_upper_array is not None else 0.05)
-                  for idx in ctrl_indices]
+        if t_upper_array is not None:
+            t_upper_safe = np.maximum(t_upper_array, t_req_array * 1.10)
+        else:
+            t_upper_safe = np.full_like(t_req_array, 0.05)
+
+        bounds = [(float(t_req_array[idx]), float(t_upper_safe[idx])) for idx in ctrl_indices]
+        x0 = np.clip(t_req_array[ctrl_indices] * 1.02, t_req_array[ctrl_indices], t_upper_safe[ctrl_indices])
 
         def interp_wall(x_ctrl):
             return PchipInterpolator(z_ctrl, x_ctrl)(z)

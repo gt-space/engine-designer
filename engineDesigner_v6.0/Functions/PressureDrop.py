@@ -42,7 +42,13 @@ def dPfluidAcceleration(A_down, A_up, rho_down, rho_up, mdot_ch):
     A_avg = 0.5 * (A_up + A_down)
     
     # Reversible Bernoulli static pressure change due to area change
-    dP_area = (mdot_ch**2 / (2.0 * rho_avg)) * (1.0 / A_down**2 - 1.0 / A_up**2)
+    # Apply diffuser recovery efficiency (0.55) when expanding (A_down > A_up)
+    dP_bernoulli = (mdot_ch**2 / (2.0 * rho_avg)) * (1.0 / A_down**2 - 1.0 / A_up**2)
+    if A_down > A_up:
+        dP_area = 0.55 * dP_bernoulli
+    else:
+        dP_area = dP_bernoulli
+
     # Momentum pressure drop due to thermal expansion 
     dP_thermal = (mdot_ch / A_avg)**2 * (1.0 / rho_down - 1.0 / rho_up)
     return dP_area + dP_thermal

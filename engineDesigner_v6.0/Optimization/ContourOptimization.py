@@ -101,24 +101,23 @@ def optimizeContour(weights=None, geo_bounds=None):
         except Exception:
             return 1e6
 
-        # Smooth, continuous proxies proportional to material volume / surface area
-        weight_pen = surf * (ep.Pc / 1000.0)   # Scales with pressure-vessel wall mass
-        price = surf                            # Material + machining/AM cost scales with surface area
-        manufacturability = 1.0
-        line_loss = 1.0 + 0.54 / (eps_c**2)
+        Vc_target = A_t * np.mean(geo_bounds["Lstar_range"])
+        vol_pen = ((vol - Vc_target) / Vc_target) ** 2
+
+        weight_pen = surf * (ep.Pc / 1000.0)
+        price = surf
         thrust_penalty = (100.0 - Lf_val) / 100.0
         cd_penalty = (3.0 - Rtc_val) / 3.0
 
-        numerator = (
-            weights["a_surf"] * surf
-            + weights["b_weight"] * weight_pen
-            + weights["c_price"] * price
-            + weights["d_loss"] * line_loss
+        total_cost = (
+            weights["a_surf"] * (surf / A_t)
+            + weights["b_weight"] * (weight_pen / A_t)
+            + weights["c_price"] * (price / A_t)
+            + weights["e_vol"] * 100.0 * vol_pen
             + weights["g_thrust"] * thrust_penalty
             + weights["h_cd"] * cd_penalty
         )
-        denominator = weights["e_vol"] * vol + weights["f_mfg"] * manufacturability
-        return numerator / denominator
+        return total_cost
 
     # 4. Run Optimizer
     x0 = np.array([8.0, 37.5, 80.0, 1.5])

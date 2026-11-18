@@ -83,3 +83,4 @@ def plotChannelPerformance(contour, hot_gas, coolant_flow):
 
 
     plt.tight_layout(rect=[0, 0, 1, 0.95])
+    

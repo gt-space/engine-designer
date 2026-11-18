@@ -54,6 +54,7 @@ def bartz_hg(A_local, M_local, Twg):
     Rtc_Rt = geometry_params["Rtc_Rt"]
     Rtc = Rtc_Rt * R_t
     At = np.pi * R_t**2
+    area_ratio_inv = np.minimum(At / A_local, 1.0)
 
     # Find Bartz Correction Factor
     mach_term = 1.0 + 0.5 * (gamma - 1.0) * M_local**2
@@ -65,7 +66,7 @@ def bartz_hg(A_local, M_local, Twg):
         * (mu_g**0.2 * cp_g / Pr_g**0.6)
         * (Pc_Pa / Cstar_actual)**0.8
         * ((2.0 * R_t) / Rtc)**0.1
-        * (At / A_local)**0.9
+        * (area_ratio_inv)**0.9
         * sigma
     )
     return hg

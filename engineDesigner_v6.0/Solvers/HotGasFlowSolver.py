@@ -11,7 +11,7 @@ def getGasPropertiesCEA():
     eps_exp = geometry_params["eps"]   
 
     rocket = CEA_Obj(oxName=oxidizer, fuelName=fuel)
-    Isp, Cstar, T0, MW, gamma = rocket.get_IvacCstrTc_exitMwGam(Pc, MR, eps_exp, 1, 0)
+    Isp, Cstar, T0, MW, gamma = rocket.get_IvacCstrTc_ChmMwGam(Pc, MR, eps_exp)
     cp, mu, k, Pr= rocket.get_Chamber_Transport(Pc, MR, eps_exp, 1)
 
     #Calculate Cstar actual to be used in Bartz Later

@@ -6,6 +6,15 @@ from Functions import PressureDrop as pd
 class ManifoldInletSplit(Component):
     def __init__(self, name, network, mdot_pipe, P_pipe, P_man_inlet,
                  rho, A_pipe, A_man_inlet, split_angle_deg=90.0):
+        self.name = name
+        self.network = network
+        self.mdot_pipe = mdot_pipe
+        self.P_pipe = P_pipe
+        self.P_man_inlet = P_man_inlet
+        self.rho = rho
+        self.A_pipe = A_pipe
+        self.A_man_inlet = A_man_inlet
+        self.split_angle_deg = split_angle_deg
         self.residual = 0.0
         self.setup()
 
@@ -28,6 +37,20 @@ class ManifoldInletSplit(Component):
 class ManifoldRingSegment(Component):
     def __init__(self, name, network, P_up, P_down, mdot_up, mdot_down,
                  A_up, A_down, Dh_up, Dh_down, dL, rho, mu, roughness):
+        self.name = name
+        self.network = network
+        self.P_up = P_up
+        self.P_down = P_down
+        self.mdot_up = mdot_up
+        self.mdot_down = mdot_down
+        self.A_up = A_up
+        self.A_down = A_down
+        self.Dh_up = Dh_up
+        self.Dh_down = Dh_down
+        self.dL = dL
+        self.rho = rho
+        self.mu = mu
+        self.roughness = roughness
         self.p_seg_residual = 0.0
         self.setup()
 
@@ -54,6 +77,15 @@ class ManifoldRingSegment(Component):
 class ManifoldBranchNode(Component):
     def __init__(self, name, network, P_man_local, P_ch_entry, mdot_man_in,
                  mdot_ch, A_man, A_ch, rho):
+        self.name = name
+        self.network = network
+        self.P_man_local = P_man_local
+        self.P_ch_entry = P_ch_entry
+        self.mdot_man_in = mdot_man_in
+        self.mdot_ch = mdot_ch
+        self.A_man = A_man
+        self.A_ch = A_ch
+        self.rho = rho
         self.p_branch_residual = 0.0
         self.setup()
 
@@ -86,13 +118,12 @@ def solveManifoldFlowNetwork(A_man_profile, Dh_man_profile, inlet_angle_deg, eng
     # Dynamically compute channel friction factor from current (nominal or uncertain) parameters
     Dh_ch = channel_geom["Dh_channel"]
     scale_factor = channel_geom.get("scale_factor", 1.0)
-    A_ch_single = channel_geom["A_channel_avg"] / scale_factor
+    A_ch_single = channel_geom["A_channel_avg"]
     mdot_ch_single_nom = (mdot_half_target / N_half) / scale_factor
 
-    # Adjust A_ch if Dh_channel is perturbed under uncertainty (holding aspect ratio constant)
     Dh_nom = channel_geom.get("Dh_channel_nominal", Dh_ch)
     area_dh_scale = (Dh_ch / Dh_nom) ** 2
-    A_ch_eff = channel_geom["A_channel_avg"] * area_dh_scale
+    A_ch_eff = A_ch_single * area_dh_scale
     A_ch_inlet_eff = channel_geom["A_ch_inlet"] * area_dh_scale
 
     V_ch_nom = mdot_ch_single_nom / (rho * (A_ch_single * area_dh_scale))
@@ -125,7 +156,8 @@ def solveManifoldFlowNetwork(A_man_profile, Dh_man_profile, inlet_angle_deg, eng
 
     for i in range(N_half):
         P_ch_in = State(P_man_0.value * 0.95, bounds=(P_exit + 100.0, 5e8), keep_feasible=True)
-        mdot_ch = State(mdot_half_target / N_half, bounds=(1e-6, mdot_half_target), keep_feasible=True)
+        # mdot_ch is now a direct assignable State representing ONE single channel's flow
+        mdot_ch = State(mdot_ch_single_nom, bounds=(1e-6, mdot_half_target / scale_factor), keep_feasible=True)
         mdot_channels.append(mdot_ch)
 
         ManifoldBranchNode(
@@ -152,7 +184,8 @@ def solveManifoldFlowNetwork(A_man_profile, Dh_man_profile, inlet_angle_deg, eng
         )
 
         if i < N_half - 1:
-            mdot_man_next = State.maximum(mdot_man_rem - mdot_ch, 1e-6)
+            # Multiply single-channel flow by scale_factor for the lumped manifold bleed-off
+            mdot_man_next = State.maximum(mdot_man_rem - mdot_ch * scale_factor, 1e-6)
             P_next = State(P_nodes[i].value, bounds=(P_exit + 1e3, 5e8), keep_feasible=True)
             P_nodes.append(P_next)
 
@@ -173,14 +206,14 @@ def solveManifoldFlowNetwork(A_man_profile, Dh_man_profile, inlet_angle_deg, eng
             )
             mdot_man_rem = mdot_man_next
 
-    total_ch_flow = sum(mdot_channels[1:], mdot_channels[0])
+    total_ch_flow = sum(mdot_channels[1:], mdot_channels[0]) * scale_factor
     Balance(
         "Total_Mass_Balance", net,
         variable=P_inlet,
         function=(total_ch_flow - mdot_half_target) / mdot_half_target
     )
 
-    SteadyState(net).solve(solver_method="trf", ftol=1e-7, xtol=1e-7, rtol=1e-2, verbose=False)
+    SteadyState(net).solve(solver_method="trf", ftol=1e-8, xtol=1e-8, rtol=1e-6, verbose=False)
 
     channel_flows = np.array([ch.value for ch in mdot_channels])
     p_static_ring = np.array([p.value for p in P_nodes])

@@ -57,12 +57,15 @@ def plotManifoldResults(contour, opt_results, cad_data):
     X_in, Y_in, Z_in = cad_data["mesh_inner"]
     ax4.plot_surface(X_in * 1e3, Y_in * 1e3, Z_in * 1e3, cmap="coolwarm", alpha=0.85, edgecolor="none")
     
+   # In Outputs/ManifoldPerformance.py (lines 54-65):
     z_nozzle = contour["z"][-40:] * 1e3
-    r_nozzle = contour["r"][-40:] * 1e3
+    # Offset wireframe to the manifold mating surface (r + tw + h_ch)
+    r_nozzle = (contour["r"][-40:] * 1e3) + 3.5
     phi_noz = np.linspace(0, 2 * np.pi, 40)
     Z_N, PHI_N = np.meshgrid(z_nozzle, phi_noz)
     R_N = np.tile(r_nozzle, (len(phi_noz), 1))
-    ax4.plot_wireframe(R_N * np.cos(PHI_N), R_N * np.sin(PHI_N), Z_N, color="gray", alpha=0.3, lw=0.6)
+    ax4.plot_wireframe(R_N * np.cos(PHI_N), R_N * np.sin(PHI_N), Z_N, color="gray", alpha=0.35, lw=0.6)
+    ax4.set_box_aspect([1, 1, 0.6])
     
     ax4.set_xlabel("X [mm]")
     ax4.set_ylabel("Y [mm]")
@@ -70,3 +73,4 @@ def plotManifoldResults(contour, opt_results, cad_data):
     ax4.set_title("4. 3D Tapered Manifold Loft on Nozzle Exit")
 
     plt.tight_layout(rect=[0, 0, 1, 0.95])
+  
